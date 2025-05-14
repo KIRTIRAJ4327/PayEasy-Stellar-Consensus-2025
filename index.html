@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayEasy - Simple Stellar Payments</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/stellar-sdk@10.4.1/dist/stellar-sdk.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>PayEasy</h1>
+            <p class="tagline">Fast, simple payments on the Stellar network</p>
+        </header>
+
+        <main>
+            <div class="payment-card">
+                <h2>Send Payment</h2>
+                <form id="payment-form">
+                    <div class="input-group">
+                        <label for="recipient">Recipient Address</label>
+                        <input type="text" id="recipient" placeholder="G..." required>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="amount">Amount (XLM)</label>
+                        <input type="number" id="amount" min="0.0000001" step="0.0000001" placeholder="1.0" required>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="memo">Memo (Optional)</label>
+                        <input type="text" id="memo" placeholder="Payment for coffee">
+                    </div>
+                    
+                    <button type="submit" id="send-button">Send Payment</button>
+                </form>
+                
+                <div id="status" class="hidden">
+                    <div class="loader"></div>
+                    <p id="status-message">Processing payment...</p>
+                </div>
+                
+                <div id="success" class="hidden">
+                    <div class="success-icon">✓</div>
+                    <h3>Payment Successful!</h3>
+                    <p>Transaction ID: <span id="tx-id"></span></p>
+                    <a id="tx-link" href="#" target="_blank">View on Stellar Expert</a>
+                </div>
+                
+                <div id="error" class="hidden">
+                    <div class="error-icon">✗</div>
+                    <h3>Payment Failed</h3>
+                    <p id="error-message"></p>
+                </div>
+            </div>
+        </main>
+        
+        <footer>
+            <p>Built for Stellar Consensus Hackathon 2025</p>
+            <p>This app runs on Stellar Testnet</p>
+        </footer>
+    </div>
+    
+    <script src="JS/app.js"></script>
+</body>
+</html>
