@@ -1,135 +1,291 @@
-document.addEventListener('DOMContentLoaded', function() {
-    // Elements
-    const form = document.getElementById('payment-form');
-    const statusDiv = document.getElementById('status');
-    const successDiv = document.getElementById('success');
-    const errorDiv = document.getElementById('error');
-    const txIdSpan = document.getElementById('tx-id');
-    const txLink = document.getElementById('tx-link');
-    const errorMessage = document.getElementById('error-message');
+/**
+ * PayEasy - Main Application Script
+ * 
+ * This script handles the core functionality of the PayEasy application:
+ * - Exchange rate display and fiat equivalent calculations
+ * - Payment form handling and validation
+ * - Stellar payment processing
+ * - Midnight API integration for enhanced security
+ * - UI state management
+ */
+
+// Import required modules
+import SecurityManager from './security.js';
+import SecurityUI from './security-ui.js';
+
+// Make sure StellarSdk is available
+if (typeof StellarSdk === 'undefined') {
+    console.error('StellarSdk is not loaded! Please check your internet connection.');
+    alert('Error: Stellar SDK not loaded. Please check your internet connection and refresh the page.');
+}
+
+// Wait for DOM to be fully loaded
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('Application initialized');
     
-    // Stellar SDK setup
+    // Initialize security manager and UI
+    const security = new SecurityManager();
+    const securityUI = new SecurityUI();
+    
+    // Initialize security features
+    const initialized = await security.initialize();
+    if (!initialized) {
+        securityUI.showNotification('Security initialization failed. Some features may be limited.', 'error');
+    } else {
+        securityUI.initialize();
+        securityUI.updateFeatureStatus('encryption', true);
+    }
+    
+    // ===== DOM Element References =====
+    const elements = {
+        form: document.querySelector('#payment-form'),
+        recipient: document.querySelector('#recipient'),
+        amount: document.querySelector('#amount'),
+        memo: document.querySelector('#memo'),
+        status: document.querySelector('#status'),
+        success: document.querySelector('#success'),
+        error: document.querySelector('#error'),
+        txId: document.querySelector('#tx-id'),
+        txLink: document.querySelector('#tx-link'),
+        errorMessage: document.querySelector('#error-message'),
+        fiatEquivalent: document.querySelector('#fiat-equivalent'),
+        securityChecks: document.querySelector('#security-checks')
+    };
+    
+    // Verify all elements exist
+    for (const [key, element] of Object.entries(elements)) {
+        if (!element) {
+            console.error(`Required element not found: #${key}`);
+            return;
+        }
+    }
+    
+    // ===== Stellar Setup =====
     const server = new StellarSdk.Server('https://horizon-testnet.stellar.org');
-    const networkPassphrase = StellarSdk.Networks.TESTNET;
-    
-    // Replace with your actual secret key from Stellar Laboratory
     const sourceSecretKey = 'SCXZW7YP5XGTQW6QGTCW2J737RTMX7JEW3HAO2HXCDRVV22EDANWXRQI';
     let sourceKeypair;
     
     try {
         sourceKeypair = StellarSdk.Keypair.fromSecret(sourceSecretKey);
-        console.log('Source account public key:', sourceKeypair.publicKey());
+        console.log('Source account:', sourceKeypair.publicKey());
     } catch (error) {
         console.error('Invalid secret key:', error);
-        showError('Invalid source account secret key. Please update your app.js file.');
+        showError('Invalid source account secret key');
         return;
     }
     
-    // Function to show/hide UI elements
-    function showStatus() {
-        form.style.display = 'none';
-        statusDiv.classList.remove('hidden');
-        successDiv.classList.add('hidden');
-        errorDiv.classList.add('hidden');
+    // ===== Exchange Rates =====
+    let exchangeRates = {
+        CAD: 0.38,
+        INR: 23.45
+    };
+    
+    // Fetch real-time exchange rates - use a mock for the hackathon demo
+    async function updateExchangeRates() {
+        try {
+            // For demo purposes, simulate API response
+            // In production, this would be a real API call
+            console.log('Updating exchange rates...');
+            
+            // Simulate network delay
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Simulate random rate fluctuations
+            exchangeRates = {
+                CAD: (0.35 + Math.random() * 0.1).toFixed(4),
+                INR: (20 + Math.random() * 10).toFixed(4)
+            };
+            
+            console.log('Updated rates:', exchangeRates);
+            
+            // Update the display if amount is already entered
+            const currentAmount = parseFloat(elements.amount.value) || 0;
+            updateFiatEquivalent(currentAmount);
+            
+        } catch (error) {
+            console.error('Failed to fetch exchange rates:', error);
+        }
+    }
+    
+    // Update rates every 15 seconds for demonstration
+    updateExchangeRates();
+    setInterval(updateExchangeRates, 15000);
+    
+    // ===== UI Functions =====
+    function showStatus(message = 'Processing payment...', securityCheck = '') {
+        elements.form.style.display = 'none';
+        elements.status.classList.remove('hidden');
+        elements.success.classList.add('hidden');
+        elements.error.classList.add('hidden');
+        document.querySelector('#status-message').textContent = message;
+        
+        if (securityCheck) {
+            const checkItem = document.createElement('div');
+            checkItem.className = 'flex items-center';
+            checkItem.innerHTML = `
+                <svg class="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>${securityCheck}</span>
+            `;
+            elements.securityChecks.appendChild(checkItem);
+        }
     }
     
     function showSuccess(txId) {
-        form.style.display = 'block';
-        statusDiv.classList.add('hidden');
-        successDiv.classList.remove('hidden');
-        errorDiv.classList.add('hidden');
-        
-        txIdSpan.textContent = txId;
-        txLink.href = `https://stellar.expert/explorer/testnet/tx/${txId}`;
+        elements.form.style.display = 'block';
+        elements.status.classList.add('hidden');
+        elements.success.classList.remove('hidden');
+        elements.error.classList.add('hidden');
+        elements.txId.textContent = txId;
+        elements.txLink.href = `https://stellar.expert/explorer/testnet/tx/${txId}`;
+        elements.securityChecks.innerHTML = '';
+        securityUI.showNotification('Transaction completed securely');
     }
     
-    function showError(message) {
-        form.style.display = 'block';
-        statusDiv.classList.add('hidden');
-        successDiv.classList.add('hidden');
-        errorDiv.classList.remove('hidden');
+    function showError(message, securityDetails = '') {
+        elements.form.style.display = 'block';
+        elements.status.classList.add('hidden');
+        elements.success.classList.add('hidden');
+        elements.error.classList.remove('hidden');
+        elements.errorMessage.textContent = message;
+        elements.securityChecks.innerHTML = '';
         
-        errorMessage.textContent = message;
+        if (securityDetails) {
+            document.querySelector('#error .text-sm').textContent = securityDetails;
+        }
+        
+        securityUI.showNotification(message, 'error');
     }
     
     function resetForm() {
-        form.reset();
+        elements.form.reset();
+        updateFiatEquivalent(0);
+        elements.securityChecks.innerHTML = '';
     }
     
-    // Handle form submission
-    form.addEventListener('submit', async function(event) {
-        event.preventDefault();
+    function updateFiatEquivalent(xlmAmount) {
+        const cadAmount = (xlmAmount * exchangeRates.CAD).toFixed(2);
+        const inrAmount = (xlmAmount * exchangeRates.INR).toFixed(2);
+        elements.fiatEquivalent.textContent = `≈ CAD ${cadAmount} | ₹${inrAmount}`;
+        console.log(`Updated fiat equivalent: CAD ${cadAmount} | ₹${inrAmount}`);
+    }
+    
+    // ===== Event Listeners =====
+    elements.amount.addEventListener('input', (e) => {
+        const amount = parseFloat(e.target.value) || 0;
+        console.log('Amount changed:', amount);
+        updateFiatEquivalent(amount);
+    });
+    
+    // Learn more link handler
+    document.getElementById('security-details-link')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        const features = document.getElementById('security-features');
+        if (features) {
+            features.classList.remove('hidden');
+            features.scrollIntoView({ behavior: 'smooth' });
+        }
+    });
+    
+    elements.form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        console.log('Form submitted');
         
-        const recipientAddress = document.getElementById('recipient').value.trim();
-        const amount = document.getElementById('amount').value;
-        const memo = document.getElementById('memo').value.trim();
+        const recipientAddress = elements.recipient.value.trim();
+        const amount = elements.amount.value;
+        const memo = elements.memo.value.trim();
         
-        // Validate inputs
-        if (!StellarSdk.StrKey.isValidEd25519PublicKey(recipientAddress)) {
-            showError('Invalid recipient address. Please enter a valid Stellar public key.');
+        // Clear previous security checks
+        elements.securityChecks.innerHTML = '';
+        
+        // Validate inputs using security manager
+        showStatus('Validating input...');
+        const validation = security.validateTransaction(recipientAddress, amount, memo);
+        if (!validation.isValid) {
+            showError(validation.errors[0].message);
             return;
         }
+        showStatus('Input validated', 'Input validation complete');
         
-        if (parseFloat(amount) <= 0) {
-            showError('Please enter a valid amount greater than 0.');
+        // Check rate limiting
+        showStatus('Checking rate limits...');
+        if (!await security.checkRateLimit(sourceKeypair.publicKey())) {
+            showError('Transaction limit exceeded. Please try again later.',
+                     'Rate limiting helps protect against automated attacks');
+            securityUI.updateFeatureStatus('rateLimit', false);
             return;
         }
+        showStatus('Rate limit checked', 'Transaction within rate limits');
+        securityUI.updateFeatureStatus('rateLimit', true);
         
-        // Show processing status
-        showStatus();
+        // Check for suspicious activity
+        showStatus('Performing security checks...');
+        const isSecure = await security.monitorActivity({
+            destination: recipientAddress,
+            amount: parseFloat(amount),
+            memo
+        });
+        
+        if (!isSecure) {
+            showError('Transaction flagged as potentially suspicious.',
+                     'Our security system detected unusual patterns. Please verify the recipient address.');
+            securityUI.updateFeatureStatus('midnight', false);
+            return;
+        }
+        showStatus('Security checks passed', 'No suspicious activity detected');
+        securityUI.updateFeatureStatus('midnight', true);
+        
+        showStatus('Processing payment...');
         
         try {
-            // Step 1: Load the source account
+            // Load the source account
             const sourceAccount = await server.loadAccount(sourceKeypair.publicKey());
             
-            // Step 2: Create a transaction
+            // Create transaction
             let transaction = new StellarSdk.TransactionBuilder(sourceAccount, {
                 fee: StellarSdk.BASE_FEE,
-                networkPassphrase: networkPassphrase
-            });
-            
-            // Add the payment operation
-            transaction = transaction.addOperation(
-                StellarSdk.Operation.payment({
-                    destination: recipientAddress,
-                    asset: StellarSdk.Asset.native(), // XLM
-                    amount: amount.toString()
-                })
-            );
+                networkPassphrase: StellarSdk.Networks.TESTNET
+            })
+            .addOperation(StellarSdk.Operation.payment({
+                destination: recipientAddress,
+                asset: StellarSdk.Asset.native(),
+                amount: amount.toString()
+            }));
             
             // Add memo if provided
             if (memo) {
                 transaction = transaction.addMemo(StellarSdk.Memo.text(memo));
             }
             
-            // Set timeout and build the transaction
+            // Build and sign transaction
             transaction = transaction.setTimeout(180).build();
-            
-            // Step 3: Sign the transaction
             transaction.sign(sourceKeypair);
             
-            // Step 4: Submit the transaction
+            showStatus('Submitting transaction...', 'Transaction signed and ready');
+            
+            // Submit transaction
             const result = await server.submitTransaction(transaction);
             console.log('Transaction successful:', result);
             
-            // Show success and reset form
             showSuccess(result.hash);
             resetForm();
             
         } catch (error) {
             console.error('Transaction failed:', error);
             
-            // Extract error message
             let errorText = 'Transaction failed. Please try again.';
-            if (error.response && error.response.data && error.response.data.extras) {
-                errorText = error.response.data.extras.result_codes.operations 
-                    ? `Operation failed: ${error.response.data.extras.result_codes.operations.join(', ')}`
-                    : `Transaction failed: ${error.response.data.extras.result_codes.transaction}`;
+            if (error.response?.data?.extras?.result_codes) {
+                const codes = error.response.data.extras.result_codes;
+                errorText = codes.operations 
+                    ? `Operation failed: ${codes.operations.join(', ')}`
+                    : `Transaction failed: ${codes.transaction}`;
             } else if (error.message) {
                 errorText = error.message;
             }
             
-            showError(errorText);
+            showError(errorText, 'Transaction could not be completed securely');
         }
     });
 });

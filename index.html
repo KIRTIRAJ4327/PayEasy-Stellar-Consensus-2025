@@ -1,67 +1,117 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PayEasy - Simple Stellar Payments</title>
-    <link rel="stylesheet" href="css/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/stellar-sdk@10.4.1/dist/stellar-sdk.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PayEasy - Simple Stellar Payments</title>
+  <link rel="stylesheet" href="css/output.css">
+  <!-- Add a favicon link to prevent 404 errors -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💸</text></svg>">
 </head>
-<body>
-    <div class="container">
-        <header>
-            <h1>PayEasy</h1>
-            <p class="tagline">Fast, simple payments on the Stellar network</p>
-        </header>
+<body class="bg-background">
+  <div class="container mx-auto px-4 py-8">
+    <header class="card bg-primary text-white mb-8">
+      <h1 class="text-3xl font-bold">PayEasy</h1>
+      <p class="tagline text-lg mt-2">Fast, simple payments on the Stellar network</p>
+      <div class="flex items-center mt-4">
+        <span class="bg-secondary px-3 py-1 rounded-full text-sm flex items-center">
+          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+          </svg>
+          Secured by Midnight
+        </span>
+      </div>
+    </header>
 
-        <main>
-            <div class="payment-card">
-                <h2>Send Payment</h2>
-                <form id="payment-form">
-                    <div class="input-group">
-                        <label for="recipient">Recipient Address</label>
-                        <input type="text" id="recipient" placeholder="G..." required>
-                    </div>
-                    
-                    <div class="input-group">
-                        <label for="amount">Amount (XLM)</label>
-                        <input type="number" id="amount" min="0.0000001" step="0.0000001" placeholder="1.0" required>
-                    </div>
-                    
-                    <div class="input-group">
-                        <label for="memo">Memo (Optional)</label>
-                        <input type="text" id="memo" placeholder="Payment for coffee">
-                    </div>
-                    
-                    <button type="submit" id="send-button">Send Payment</button>
-                </form>
-                
-                <div id="status" class="hidden">
-                    <div class="loader"></div>
-                    <p id="status-message">Processing payment...</p>
-                </div>
-                
-                <div id="success" class="hidden">
-                    <div class="success-icon">✓</div>
-                    <h3>Payment Successful!</h3>
-                    <p>Transaction ID: <span id="tx-id"></span></p>
-                    <a id="tx-link" href="#" target="_blank">View on Stellar Expert</a>
-                </div>
-                
-                <div id="error" class="hidden">
-                    <div class="error-icon">✗</div>
-                    <h3>Payment Failed</h3>
-                    <p id="error-message"></p>
-                </div>
+    <main>
+      <!-- Security Status Panel will be inserted here by security-ui.js -->
+      <div class="card">
+        <h2 class="text-2xl font-semibold mb-6">Send Payment</h2>
+        <form id="payment-form">
+          <div class="mb-4">
+            <label for="recipient" class="block text-gray-700 mb-2">Recipient Address</label>
+            <input type="text" id="recipient" placeholder="G..." required
+                   class="input-field w-full">
+            <div class="text-xs text-gray-500 mt-1">
+              Recipient address is verified against known scam databases
             </div>
-        </main>
+          </div>
+          
+          <div class="mb-4">
+            <label for="amount" class="block text-gray-700 mb-2">Amount (XLM)</label>
+            <input type="number" id="amount" min="0.0000001" step="0.0000001" placeholder="1.0" required
+                   class="input-field w-full">
+            <div id="fiat-equivalent" class="text-sm text-gray-600 mt-1">
+              ≈ CAD 0.00 | ₹0.00
+            </div>
+            <div class="text-green-600 text-sm mt-1 flex items-center">
+              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+              Fee: <0.001 XLM ($0.01)
+            </div>
+          </div>
+          
+          <div class="mb-6">
+            <label for="memo" class="block text-gray-700 mb-2">Memo (Optional)</label>
+            <input type="text" id="memo" placeholder="Payment for coffee"
+                   class="input-field w-full">
+            <div class="text-xs text-gray-500 mt-1">
+              Memo content is validated for security
+            </div>
+          </div>
+          
+          <button type="submit" id="send-button" class="btn-primary w-full">
+            Send Payment
+          </button>
+        </form>
         
-        <footer>
-            <p>Built for Stellar Consensus Hackathon 2025</p>
-            <p>This app runs on Stellar Testnet</p>
-        </footer>
-    </div>
+        <div id="status" class="hidden text-center py-8">
+          <div class="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mx-auto"></div>
+          <p id="status-message" class="mt-4 text-gray-600">Processing payment...</p>
+          <div id="security-checks" class="mt-4 space-y-2 text-sm text-gray-500">
+            <!-- Security check status items will be added here dynamically -->
+          </div>
+        </div>
+        
+        <div id="success" class="hidden text-center py-8">
+          <div class="text-green-500 text-5xl mb-4">✓</div>
+          <h3 class="text-xl font-semibold text-green-600 mb-2">Payment Successful!</h3>
+          <p class="mb-2">Transaction ID: <span id="tx-id" class="font-mono text-sm"></span></p>
+          <a id="tx-link" href="#" target="_blank" class="text-primary hover:text-secondary">View on Stellar Expert</a>
+          <div class="mt-4 text-sm text-gray-600">
+            Transaction verified with zero-knowledge proof
+          </div>
+        </div>
+        
+        <div id="error" class="hidden text-center py-8">
+          <div class="text-red-500 text-5xl mb-4">✗</div>
+          <h3 class="text-xl font-semibold text-red-600 mb-2">Payment Failed</h3>
+          <p id="error-message" class="text-gray-700"></p>
+          <div class="mt-4 text-sm text-gray-600">
+            Security check details will appear here
+          </div>
+        </div>
+      </div>
+    </main>
     
-    <script src="JS/app.js"></script>
+    <footer class="mt-8 text-center text-gray-600">
+      <p>Built for Stellar Consensus Hackathon 2025</p>
+      <p class="mt-1">This app runs on Stellar Testnet</p>
+      <p class="mt-2 text-sm">
+        <a href="#" class="text-primary hover:text-secondary" id="security-details-link">
+          Learn more about our security features
+        </a>
+      </p>
+    </footer>
+  </div>
+  
+  <!-- Load Stellar SDK as a regular script (non-module) to make it available globally -->
+  <script src="https://cdn.jsdelivr.net/npm/stellar-sdk@10.4.1/dist/stellar-sdk.min.js"></script>
+  
+  <!-- Load our application modules -->
+  <script type="module" src="JS/privacy-score.js"></script>
+  <script type="module" src="JS/transaction-privacy.js"></script>
+  <script type="module" src="JS/app.js"></script>
 </body>
 </html>
