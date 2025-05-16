@@ -1,8 +1,93 @@
 # PayEasy Technical Design Document
 
-## Overview
+## System Overview
+PayEasy is a cross-chain payment solution that connects Stellar and Polkadot networks through a user-friendly web interface, abstracting away blockchain complexity while maintaining security and transparency.
 
-PayEasy is a web-based application for sending XLM payments on the Stellar testnet, designed with a focus on intuitive user experience. The application demonstrates how blockchain-based payments can be as user-friendly as traditional web applications.
+## System Architecture Diagram
+```
+┌─────────────────┐     ┌───────────────────┐     ┌─────────────────┐
+│                 │     │                   │     │                 │
+│  User Interface ├─────┤ Business Services ├─────┤ Blockchain APIs │
+│  (React/TailwindCSS)  │ (Validation/Auth) │     │ (Stellar/Polkadot) 
+│                 │     │                   │     │                 │
+└─────────────────┘     └───────────────────┘     └─────────────────┘
+        │                        │                        │
+        │                        │                        │
+        ▼                        ▼                        ▼
+┌─────────────────┐     ┌───────────────────┐     ┌─────────────────┐
+│                 │     │                   │     │                 │
+│  Passkeys Auth  │     │ Smart Contracts   │     │ Network RPC     │
+│  (Web2-like UX) │     │ (Payment Logic)   │     │ (Data Access)   │
+│                 │     │                   │     │                 │
+└─────────────────┘     └───────────────────┘     └─────────────────┘
+```
+
+## Core Components
+
+### 1. Frontend Interface
+- React-based web application
+- TailwindCSS for responsive design
+- Passkey integration for seamless user authentication
+- Progressive disclosure of blockchain elements
+
+### 2. Authentication System
+- Passkeys for biometric authentication
+- No seed phrases or private keys exposed to users
+- Domain-bound smart wallet creation
+- Cross-device synchronization
+
+### 3. Validation Service
+- Address format validation for both Stellar and Polkadot
+- Suspicious pattern detection
+- Transaction amount validation
+- Memo field validation for Stellar
+
+### 4. Payment Processing
+- Smart contract handling payment logic
+- Cross-chain asset swapping
+- Fee optimization
+- Transaction monitoring
+
+### 5. Blockchain Integrations
+- Stellar SDK for XLM transfers
+- Polkadot.js API for DOT transfers
+- Launchtube for gas abstraction on Stellar
+
+## Design Decisions
+
+### Storage Strategy
+- Smart contract state stored on respective chains
+- User preferences in local browser storage
+- No personal data stored in centralized databases
+
+### Contract State Management
+- Minimal state design pattern
+- Event-driven architecture for state updates
+- Separate state contracts from business logic for upgradeability
+
+### Event Emission
+- Transaction initiation events
+- Confirmation events
+- Cross-chain bridging events
+- Error events with descriptive messages
+
+### Passkeys Implementation
+- WebAuthn standard integration
+- Platform authenticator preference
+- Fallback mechanisms for unsupported devices
+- Recovery path through multi-device registration
+
+## Technical Challenges Overcome
+
+1. **Cross-Chain Compatibility**: Designed a unified interface to handle differing transaction models between Stellar and Polkadot.
+
+2. **Gas Fee Abstraction**: Implemented launchtube integration to shield users from gas fee complexity.
+
+3. **Transaction Finality Discrepancies**: Created a normalized status reporting system to handle different confirmation times across chains.
+
+4. **Smart Wallet Recovery**: Developed a secure recovery mechanism that doesn't expose private keys.
+
+5. **Responsive Error Handling**: Built a comprehensive error handling system that translates blockchain errors into user-friendly messages.
 
 ## Components
 

@@ -1,47 +1,52 @@
-# PayEasy: Narrative "Why"
+# PayEasy: Why We Built It
 
-## What is PayEasy?
+## The Problem
+Blockchain payments today are needlessly complex. Users are forced to:
+- Manage cryptic wallet addresses and seed phrases
+- Navigate confusing blockchain interfaces
+- Deal with gas fees and network complexity
+- Understand blockchain terminology just to send money
 
-PayEasy is a web application that demonstrates how blockchain technology, specifically the Stellar network, can power fast, low-cost international payments with a user experience that rivals traditional Web2 payment applications. The app provides a simple, intuitive interface for sending XLM (Stellar's native currency) on the Stellar testnet.
+This complexity creates a significant barrier to adoption of blockchain technology and limits its practical use for everyday payments.
 
-## What Problem Does PayEasy Solve?
+## Our Solution
+PayEasy reimagines blockchain payments with a familiar web2-like experience while leveraging the benefits of both Stellar and Polkadot networks. By abstracting away blockchain complexity, we've created an interface that anyone familiar with online banking can immediately use.
 
-Traditional international money transfers are slow (taking days to settle), expensive (with high fees), and often have complex interfaces. Meanwhile, many blockchain-based payment solutions overwhelm users with technical jargon, complicated wallet setup processes, and interfaces that expose blockchain complexity unnecessarily.
+## Who We're Helping
+1. **Everyday Users**: People who want to send money internationally without the friction of traditional banking
+2. **Remittance Senders**: Migrant workers sending money back home at a fraction of traditional costs
+3. **E-commerce Platforms**: Businesses looking to integrate crypto payments without confusing their customers
+4. **Cross-chain DeFi Users**: Crypto enthusiasts who need to move assets between Stellar and Polkadot ecosystems
 
-PayEasy solves this by:
-1. Providing a clean, familiar form-based interface reminiscent of popular Web2 payment apps
-2. Hiding blockchain complexity while leveraging its benefits
-3. Offering real-time feedback with clear status indicators
-4. Making cross-border payments accessible to non-technical users
+## Why It Matters
+Financial inclusion remains a major challenge globally. Over 1.7 billion people are unbanked, yet many have access to smartphones. By removing the technical barriers to using blockchain payments, we can make financial services more accessible and affordable for everyone.
 
-## Who Does PayEasy Help?
+## Our Value Proposition
+- **Simplicity**: Send payments with just a few clicks using familiar interfaces
+- **Security**: Leverage blockchain security without exposing users to complexity
+- **Cross-chain**: Access the benefits of both Stellar and Polkadot networks
+- **Cost-effective**: Lower fees than traditional banking or remittance services
+- **User-friendly**: No need to learn blockchain terminology or manage keys
 
-PayEasy helps:
-- Individuals sending money across borders (e.g., remittances)
-- Freelancers receiving international payments
-- Small businesses conducting global commerce
-- Anyone who needs the benefits of blockchain payments without the technical complexity
+## Why Stellar and Polkadot?
+We chose to build on both Stellar and Polkadot for their complementary strengths:
 
-## Why is PayEasy Important?
+**Stellar** provides:
+- Fast, low-cost transactions ideal for payments
+- Passkeys for seamless authentication
+- Launchtube for gas fee abstraction
+- Strong focus on financial inclusion aligning with our mission
 
-PayEasy is important because it demonstrates that blockchain technology can be accessible to mainstream users. By creating familiar, intuitive interfaces, we can accelerate blockchain adoption and extend its benefits to more people. The project proves that Web3 UX doesn't have to sacrifice usability to leverage decentralized technology.
+**Polkadot** offers:
+- Interoperability across multiple blockchains
+- Smart contract capabilities on the Polkadot Hub
+- Strong governance mechanisms
+- Growing ecosystem of financial applications
 
-## Value Proposition
+By combining both networks, we create a more powerful solution than would be possible on either chain alone.
 
-PayEasy offers:
-- Simplified access to Stellar's fast, low-cost payment network
-- Web2-like user experience with Web3 benefits
-- Clear feedback throughout the payment process
-- An educational model for blockchain developers focused on user experience
+## Our Experience Building on Stellar
+Implementing Stellar Passkeys has been transformative for our user experience. By eliminating the need for seed phrases and complex wallet management, we've created an authentication flow that feels as natural as logging into a web2 application. The Stellar SDK provided all the tools we needed to access the network's payment capabilities while maintaining a streamlined UX.
 
-## How Stellar Enables PayEasy
-
-Stellar is the perfect blockchain for this project because it offers:
-- Fast transaction times (3-5 seconds)
-- Extremely low fees (< $0.0001 per transaction)
-- A robust, well-documented JavaScript SDK
-- Native support for multiple currencies and asset types
-- A reliable testnet for development and demonstration
-- Built-in features like memo fields for payment descriptions
-
-By leveraging these Stellar features while hiding unnecessary complexity, PayEasy shows how blockchain technology can power the next generation of user-friendly financial applications. 
+## Our Experience Building on Polkadot
+The Polkadot Hub offered us powerful smart contract capabilities that complement Stellar's payment focus. We found the Polkadot.js API documentation comprehensive and developer-friendly, making integration straightforward. The ability to deploy smart contracts on the Hub testnet allowed us to quickly develop and test our cross-chain functionality. 

@@ -1,20 +1,47 @@
-# PayEasy - Stellar Consensus Hackathon 2025
+# PayEasy - Simplifying Cross-Chain Payments
 
-A web application that demonstrates how Stellar can power fast, low-cost international payments with a Web2-like user experience, enhanced with advanced security features and zero-knowledge proofs.
+A web application that demonstrates how Stellar and Polkadot can power fast, low-cost international payments with a Web2-like user experience.
 
 ## Features
+- Seamless cross-chain payments between Stellar and Polkadot networks
+- Web2-like user experience with simplified wallet interactions
+- Address validation and security checks
+- Real-time transaction monitoring
+- Smart contract-based payment processing
 
-- Simple, intuitive interface for sending XLM payments on the Stellar testnet
-- Advanced security through Midnight API integration:
-  - Zero-knowledge proofs for privacy-preserving transactions
-  - Decentralized identity verification
-  - Real-time scam address detection
-  - Rate limiting and suspicious activity monitoring
-- Real-time exchange rates for multiple currencies
-- Transaction feedback with detailed status updates
-- Comprehensive input validation and security checks
-- Memo field support with content validation
-- Error handling with clear user feedback
+## Technologies Used
+- Stellar SDK: https://github.com/stellar/js-stellar-sdk
+- Passkeys Kit: https://github.com/kalepail/passkey-kit
+- Launchtube: https://github.com/stellar/launchtube
+- Polkadot.js API for Polkadot integration
+- React.js for frontend interface
+- TailwindCSS for styling
+
+## Why PayEasy?
+PayEasy addresses the complex UX challenges in blockchain payments by creating a familiar, web2-like experience while leveraging the benefits of Stellar and Polkadot blockchains. Our solution eliminates complicated wallet management, seed phrases, and confusing addresses to make crypto payments accessible to everyone.
+
+## Technical Design Documentation
+See [TECHNICAL_DESIGN.md](./TECHNICAL_DESIGN.md) for detailed technical information about the system architecture, design decisions, and implementation details.
+
+## Deployed Contracts
+- Stellar Testnet Contract: [Contract ID]
+- Polkadot Hub Testnet Contract: [Contract ID]
+
+## Live Demo
+[Link to deployed front-end]
+
+## Post-Hackathon Roadmap
+1. User testing and feedback integration
+2. Mobile app development
+3. Additional blockchain integrations
+4. Partnership with payment providers
+5. Mainnet deployment and security audits
+
+## User Onboarding Strategy
+1. Simple email/social login with passkeys
+2. Guided tutorial for first-time users
+3. Progressive disclosure of blockchain elements
+4. Zero gas fees for first transactions (covered by launchtube)
 
 ## Security Features
 
@@ -42,10 +69,6 @@ PayEasy leverages the Midnight API for enhanced security:
 - HTML/CSS/JavaScript
 - Tailwind CSS for UI
 - Stellar Testnet
-
-## Live Demo
-
-[Demo Video Link - Coming Soon]
 
 ## Screenshots
 
