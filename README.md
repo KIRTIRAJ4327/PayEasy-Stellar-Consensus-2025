@@ -118,10 +118,22 @@ Key development insights:
 ## 📄 License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## 💬 Personal Note from the Creator
+This was my first hackathon experience, and it's been truly transformative. I didn't expect I could create something like PayEasy, but I believed in myself and what we could accomplish together. The journey hasn't been easy, but it's been incredibly rewarding.
+
+I'm excited to share this experience with my college classmates and inspire them to join future hackathons. These events provide invaluable opportunities to learn, create, and connect with the global blockchain community.
+
+Special thanks to Consensus for organizing this amazing event, to our sponsors for making it possible, and to all the mentors (especially Sasha from Polkadot) who provided guidance and support throughout the hackathon. Your encouragement made all the difference.
+
+To anyone considering joining a hackathon: take the leap! It's an experience worth having, regardless of your technical background or experience level.
+
 ## 🙏 Acknowledgements
-- Stellar Development Foundation
-- Polkadot Ecosystem
-- Stellar Consensus Hackathon 2025 organizers
+- **Stellar Development Foundation** - For creating the tools and technology that made our project possible
+- **Polkadot Ecosystem** - For the cross-chain capabilities and mentorship, especially Sasha for the invaluable guidance
+- **Consensus 2025 Organizers** - For creating this platform for innovation and bringing the community together
+- **Hackathon Mentors** - Who patiently answered questions and provided expert feedback
+- **Fellow Participants** - For the inspiration, collaboration, and friendly competition
+- **My College** - For encouraging participation in tech events that expand our horizons
 
 ---
 
