@@ -24,5 +24,5 @@ The video also includes an explanation of the technical architecture, highlighti
 
 ## Additional Resources
 - [PayEasy GitHub Repository](https://github.com/KIRTIRAJ4327/PayEasy)
-- [Presentation Slides](https://www.canva.com/design/unique-id/PayEasy-Presentation)
+- [Presentation Slides](https://www.canva.com/design/DAGnn4yanvE/FbKHjXiLjfST0mSpX0FUYw/edit)
 - [Technical Documentation](../TECHNICAL_DESIGN.md) 

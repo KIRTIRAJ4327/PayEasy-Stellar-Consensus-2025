@@ -59,6 +59,7 @@ We leverage Stellar Passkeys to provide a seamless and intuitive UX by:
 ## 📝 Documentation
 - [Why PayEasy](./NARRATIVE.md) - Our project narrative and vision
 - [Technical Design](./TECHNICAL_DESIGN.md) - Technical architecture and design decisions
+- [Presentation Slides](https://www.canva.com/design/DAGnn4yanvE/FbKHjXiLjfST0mSpX0FUYw/edit) - Project presentation for Stellar Consensus Hackathon
 
 ## 🔗 Deployed Contracts
 - Stellar Testnet Contract: `GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGSNFHEYVXM3XOJMDS674JZ` ([Stellar Expert Link](https://stellar.expert/explorer/testnet/account/GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGSNFHEYVXM3XOJMDS674JZ))

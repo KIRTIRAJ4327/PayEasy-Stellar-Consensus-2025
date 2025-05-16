@@ -47,15 +47,17 @@
 - [x] Plan for onboarding users
 - [ ] **VERIFY**: Contract actually deployed and working
 
-## Presentation Requirements ⚠️
+## Presentation Requirements ✅
 
-- [ ] **MISSING**: Canva presentation slides with:
-  - [ ] Team slide
-  - [ ] Problem statement slide
-  - [ ] Solution and vision slide
-  - [ ] Demo slide
-  - [ ] Blockchain integration slide
-  - [ ] Future roadmap slide
+- [x] Canva presentation slides with:
+  - [x] Team slide
+  - [x] Problem statement slide
+  - [x] Solution and vision slide
+  - [x] Demo slide
+  - [x] Blockchain integration slide
+  - [x] Future roadmap slide
+
+Link to presentation: [PayEasy Canva Presentation](https://www.canva.com/design/DAGnn4yanvE/FbKHjXiLjfST0mSpX0FUYw/edit)
 
 ## Additional Requirements for Full Submission
 
@@ -82,7 +84,7 @@
    - Explanation of key features
    - Demo of working features
 
-4. **Prepare Canva presentation**:
+4. **Prepare Canva presentation** ✅:
    - Create 6 slides following required format
    - Practice 3-minute presentation
 
