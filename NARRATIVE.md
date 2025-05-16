@@ -1,5 +1,20 @@
 # Why PayEasy?
 
+## Our Story: Born from Real-World Remittance Challenges
+
+As international students in Canada, our team experienced firsthand the frustration of sending money back home. One of our founders shares:
+
+> "Every month, I send money from Canada (CAD) to India (INR) through popular remittance apps like Remitly. While convenient, I noticed significant gaps between the exchange rates I received and actual market rates. For example, when the Google rate showed 1 CAD = 61.33 INR, the remittance app only offered 1 CAD = 61.04 INR. Combined with transaction fees, these seemingly small differences cost international students and workers hundreds of dollars annually."
+
+This experience revealed a critical problem facing millions of international students, workers, and immigrants worldwide. Traditional remittance services and banks often:
+
+- Charge high transfer fees (3-7% on average)
+- Offer below-market exchange rates
+- Take days to complete transactions
+- Lack transparency about the total cost
+
+We built PayEasy to challenge this status quo by leveraging blockchain technology to provide near-market-rate currency exchanges with minimal fees, while maintaining the simple user experience people expect from traditional financial apps.
+
 ## The Problem: Web3 UX Often Sucks
 
 Despite the promise of blockchain technology, most Web3 applications suffer from poor user experience that creates significant barriers to adoption:

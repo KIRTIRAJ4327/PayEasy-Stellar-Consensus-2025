@@ -240,3 +240,39 @@ PayEasy implements cross-chain functionality between Stellar and Polkadot throug
    - Privacy-preserving transaction analytics
    - Personalized spending insights
    - Fraud detection algorithms 
+
+## International Remittance Use Case
+
+Our primary focus is addressing the challenges international students and workers face when sending money home:
+
+### Current Challenges
+- **High Fees**: Traditional remittance services charge 3-7% in fees
+- **Unfavorable Exchange Rates**: Hidden markups of 1-3% from market rates
+- **Slow Processing**: 2-5 business days for settlement
+- **Lack of Transparency**: Unclear total cost structure
+
+### PayEasy's Solution
+- **Near-Market Exchange Rates**: Smart contracts source rates from decentralized oracles
+- **Fee Reduction**: <0.5% fee structure, transparent and upfront
+- **Settlement Speed**: <5 seconds for transaction confirmation
+- **Multi-Currency Support**: Initial focus on high-volume corridors:
+  - CAD → INR (Canada to India)
+  - USD → PHP (US to Philippines)
+  - GBP → NGN (UK to Nigeria)
+  - EUR → MAD (Europe to Morocco)
+
+### Implementation Approach
+1. **Exchange Rate Oracle**:
+   - Stellar-based price feed that aggregates data from multiple sources
+   - Updates every minute to ensure competitive rates
+   - Smart contract enforces maximum spread of 0.3% from mid-market rate
+
+2. **On/Off Ramp Integration**:
+   - Partnerships with local banks in target countries
+   - Automatic conversion and deposit to recipient accounts
+   - Regulatory compliance built into smart contracts
+
+3. **Cost Comparison Feature**:
+   - Real-time comparison with traditional remittance services
+   - Transparency regarding fees and exchange rates
+   - Estimated savings calculator based on transaction amount 

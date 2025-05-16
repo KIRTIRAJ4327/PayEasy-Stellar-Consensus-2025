@@ -3,9 +3,12 @@
 ![PayEasy Logo](https://i.ibb.co/TvDdSdY/payeasy-logo.png)
 
 ## 🚀 Problem Statement 
-Traditional Web3 payment applications suffer from poor user experience, requiring complicated wallet setups, seed phrase management, and confusing transaction flows. PayEasy solves this by creating a Web2-like payment experience powered by Stellar and Polkadot blockchain technologies.
+Traditional Web3 payment applications suffer from poor user experience, requiring complicated wallet setups, seed phrase management, and confusing transaction flows. Meanwhile, international remittance services charge high fees and offer unfavorable exchange rates to millions of students and workers abroad.
+
+Born from our personal struggles as international students in Canada sending money home, PayEasy solves these challenges by creating a Web2-like payment experience powered by Stellar and Polkadot blockchain technologies that delivers near-market exchange rates with minimal fees.
 
 ## 📊 User Base
+- **International Students & Workers**: Our primary users who regularly send money home and face excessive fees
 - Everyday users who want to transact with digital currency without technical knowledge
 - Businesses seeking to integrate crypto payments without disrupting customer experience
 - Cross-border payment users looking for faster, cheaper alternatives to traditional banks
