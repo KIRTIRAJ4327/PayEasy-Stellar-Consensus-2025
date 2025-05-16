@@ -200,6 +200,11 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
   // All the state from the original PayEasyPhase2 component
   const [state, setState] = React.useState('form'); // Possible states: form, loading, success, error
   const [recipientAddress, setRecipientAddress] = React.useState('');
+  
+  // Add separate state variables for XLM and DOT addresses
+  const [xlmRecipientAddress, setXlmRecipientAddress] = React.useState('');
+  const [dotRecipientAddress, setDotRecipientAddress] = React.useState('');
+  
   const [senderAddress, setSenderAddress] = React.useState(currentUser?.address || '');
   const [amount, setAmount] = React.useState('');
   const [memo, setMemo] = React.useState('');
@@ -237,6 +242,15 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
         refreshIntervalRef.current = null;
       }
     };
+  }, []);
+  
+  // Initialize currency-specific address variables based on the initial recipientAddress value
+  React.useEffect(() => {
+    if (selectedCurrency === 'XLM') {
+      setXlmRecipientAddress(recipientAddress);
+    } else {
+      setDotRecipientAddress(recipientAddress);
+    }
   }, []);
   
   // Privacy features state
@@ -496,7 +510,10 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
     
     if (!isMounted.current) return;
     
-    if (!recipientAddress) {
+    // Get the current recipient address based on the selected currency
+    const currentRecipientAddress = selectedCurrency === 'XLM' ? xlmRecipientAddress : dotRecipientAddress;
+    
+    if (!currentRecipientAddress) {
       setErrorText('Please enter a valid recipient address');
       setState('error');
       return;
@@ -563,7 +580,7 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
           // Execute transaction
           const result = await PolkadotSvc.sendUSDCTransaction(
             PolkadotSvc.selectedAccount,
-            recipientAddress,
+            currentRecipientAddress,
             parseFloat(amount)
           );
           
@@ -616,7 +633,7 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
               
               // In a real implementation, we would store the transaction details
               // including sender and recipient for display in the confirmation
-              console.log(`Demo transaction: ${senderAddress || 'Unknown'} → ${recipientAddress}`);
+              console.log(`Demo transaction: ${senderAddress || 'Unknown'} → ${currentRecipientAddress}`);
             } else {
               setErrorText('Stellar transaction failed. Network error.');
               setState('error');
@@ -664,15 +681,78 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
   };
 
   const handleCurrencyChange = (currency) => {
-    // Clear any previous transaction data when switching networks
-    if (selectedCurrency !== currency) {
-      setState('form');
-      setTxId('');
-      setErrorText('');
+    // Prevent processing if already on this currency
+    if (selectedCurrency === currency) {
+      return;
     }
     
+    // First sync the current recipient address to its specific state variable
+    if (selectedCurrency === 'XLM') {
+      setXlmRecipientAddress(recipientAddress);
+    } else {
+      setDotRecipientAddress(recipientAddress);
+    }
+    
+    // Reset the form completely
+    setState('form');
+    setTxId('');
+    setErrorText('');
+    
+    // Clear input for amount (but keep the current address)
+    setAmount('');
+    
+    // Reset fiat equivalents
+    setUsdEquivalent('0.00');
+    setCadEquivalent('0.00');
+    setInrEquivalent('0.00');
+    
+    // Update recipient address based on the newly selected currency
+    if (currency === 'XLM') {
+      // Set shared recipientAddress to the XLM-specific address
+      setRecipientAddress(xlmRecipientAddress);
+      
+      // XLM defaults
+      setPrivacyOptions({
+        zeroKnowledge: false,
+        scamProtection: true,
+        rateLimiting: false,
+        encryption: false,
+        hideAmount: false,
+        obscureRecipient: false,
+        preventTracking: false,
+        protectMetadata: false
+      });
+      setPrivacyScore(20);
+      setPrivacyScoreDescription('Basic Privacy');
+      setPrivacyBadge('Standard');
+      
+      // Set XLM-specific preview values
+      setPreviewRecipient('GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGSNFHEYVXM3XOJMDS674JZ');
+    } else {
+      // Set shared recipientAddress to the DOT-specific address
+      setRecipientAddress(dotRecipientAddress);
+      
+      // DOT defaults
+      setPrivacyOptions({
+        zeroKnowledge: true,
+        scamProtection: true,
+        rateLimiting: false,
+        encryption: false,
+        hideAmount: false,
+        obscureRecipient: false,
+        preventTracking: false,
+        protectMetadata: true
+      });
+      setPrivacyScore(75);
+      setPrivacyScoreDescription('Enhanced Privacy');
+      setPrivacyBadge('Midnight Enhanced');
+      
+      // Set DOT-specific preview values
+      setPreviewRecipient('5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY');
+    }
+    
+    // Finally, update the currency
     setSelectedCurrency(currency);
-    // Currency change will trigger the useEffect to update fiat equivalents
   };
 
   // Handle amount change with fiat conversion
@@ -791,22 +871,47 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
                     <label className="block text-gray-700 mb-2" htmlFor="recipient-address">
                       Recipient Address
                     </label>
-                    <input
-                      className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      type="text"
-                      id="recipient-address"
-                      name="recipient-address"
-                      placeholder={usingMidnightNetwork ? "5..." : "G..."}
-                      value={recipientAddress}
-                      onChange={(e) => setRecipientAddress(e.target.value)}
-                      autoComplete="off"
-                      required
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      {usingMidnightNetwork 
-                        ? "Example: 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
-                        : "Example: GDXDFWOBZTCD4PCNJZJ72GISISUUTPQX45PU44WDJMDEP3FQWMN7CCGL"}
-                    </p>
+                    {selectedCurrency === 'XLM' ? (
+                      <div>
+                        <input
+                          className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          type="text"
+                          id="xlm-recipient-address"
+                          name="xlm-recipient-address"
+                          placeholder="G..."
+                          value={xlmRecipientAddress}
+                          onChange={(e) => {
+                            setXlmRecipientAddress(e.target.value);
+                            setRecipientAddress(e.target.value); // Also update the shared state for backward compatibility
+                          }}
+                          autoComplete="off"
+                          required
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Example: GDXDFWOBZTCD4PCNJZJ72GISISUUTPQX45PU44WDJMDEP3FQWMN7CCGL
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <input
+                          className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          type="text"
+                          id="dot-recipient-address"
+                          name="dot-recipient-address"
+                          placeholder="5..."
+                          value={dotRecipientAddress}
+                          onChange={(e) => {
+                            setDotRecipientAddress(e.target.value);
+                            setRecipientAddress(e.target.value); // Also update the shared state for backward compatibility
+                          }}
+                          autoComplete="off"
+                          required
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Example: 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
+                        </p>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="mb-4">
@@ -829,28 +934,57 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
                     <label className="block text-gray-700 mb-2" htmlFor="payment-amount">
                       Amount ({selectedCurrency})
                     </label>
-                    <input
-                      className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      type="number"
-                      id="payment-amount"
-                      name="payment-amount"
-                      placeholder="1.0"
-                      min="0.0000001"
-                      step="0.0000001"
-                      value={amount}
-                      onChange={handleAmountChange}
-                      autoComplete="transaction-amount"
-                      required
-                    />
-                    <div className="text-sm text-gray-600 mt-1">
-                      ≈ ${usdEquivalent} | CAD {cadEquivalent} | ₹{inrEquivalent}
-                    </div>
-                    <div className="text-green-600 text-sm mt-1 flex items-center">
-                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
-                      </svg>
-                      Fee: {feeAmount}
-                    </div>
+                    {selectedCurrency === 'XLM' ? (
+                      <div>
+                        <input
+                          className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          type="number"
+                          id="payment-amount-xlm"
+                          name="payment-amount"
+                          placeholder="1.0"
+                          min="0.0000001"
+                          step="0.0000001"
+                          value={amount}
+                          onChange={handleAmountChange}
+                          autoComplete="transaction-amount"
+                          required
+                        />
+                        <div className="text-sm text-gray-600 mt-1">
+                          ≈ ${usdEquivalent} | CAD {cadEquivalent} | ₹{inrEquivalent}
+                        </div>
+                        <div className="text-green-600 text-sm mt-1 flex items-center">
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
+                          </svg>
+                          Fee: {feeAmount}
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <input
+                          className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          type="number"
+                          id="payment-amount-dot"
+                          name="payment-amount"
+                          placeholder="1.0"
+                          min="0.0000001"
+                          step="0.0000001"
+                          value={amount}
+                          onChange={handleAmountChange}
+                          autoComplete="transaction-amount"
+                          required
+                        />
+                        <div className="text-sm text-gray-600 mt-1">
+                          ≈ ${usdEquivalent} | CAD {cadEquivalent} | ₹{inrEquivalent}
+                        </div>
+                        <div className="text-green-600 text-sm mt-1 flex items-center">
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
+                          </svg>
+                          Fee: {feeAmount}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="mb-6">
@@ -896,6 +1030,7 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
                     </div>
                   </div>
                   
+                  {/* Midnight Network information - only show when DOT is selected */}
                   {usingMidnightNetwork && (
                     <div className="mb-4 rounded-md bg-purple-50 p-3 border border-purple-200">
                       <div className="flex items-start">
@@ -913,24 +1048,26 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
                   <div className="mb-6">
                     <h3 className="text-md font-medium text-gray-700 mb-2">Security Features</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="flex items-center">
-                        <input 
-                          type="checkbox" 
-                          id="toggle-zero-knowledge" 
-                          name="toggle-zero-knowledge"
-                          className={`mr-2 h-4 w-4 ${usingMidnightNetwork ? 'text-purple-600' : 'text-blue-600'}`}
-                          checked={privacyOptions.zeroKnowledge}
-                          onChange={() => handleToggleOption('zeroKnowledge')}
-                          disabled={!usingMidnightNetwork}
-                          aria-describedby="zero-knowledge-desc"
-                        />
-                        <label htmlFor="toggle-zero-knowledge" className="text-gray-700">
-                          Zero-Knowledge Proofs
-                          {usingMidnightNetwork && (
+                      {/* Zero-Knowledge Feature - only visible when DOT is selected */}
+                      {usingMidnightNetwork && (
+                        <div className="flex items-center">
+                          <input 
+                            type="checkbox" 
+                            id="toggle-zero-knowledge" 
+                            name="toggle-zero-knowledge"
+                            className="mr-2 h-4 w-4 text-purple-600"
+                            checked={privacyOptions.zeroKnowledge}
+                            onChange={() => handleToggleOption('zeroKnowledge')}
+                            aria-describedby="zero-knowledge-desc"
+                          />
+                          <label htmlFor="toggle-zero-knowledge" className="text-gray-700">
+                            Zero-Knowledge Proofs
                             <span className="ml-1 text-xs text-purple-600" id="zero-knowledge-desc">(Default)</span>
-                          )}
-                        </label>
-                      </div>
+                          </label>
+                        </div>
+                      )}
+                      
+                      {/* Common features for both currencies */}
                       <div className="flex items-center">
                         <input 
                           type="checkbox" 
@@ -1004,24 +1141,25 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
                         />
                         <label htmlFor="toggle-prevent-tracking" className="text-gray-700">Prevent Tracking</label>
                       </div>
-                      <div className="flex items-center">
-                        <input 
-                          type="checkbox" 
-                          id="toggle-metadata-protection" 
-                          name="toggle-metadata-protection"
-                          className={`mr-2 h-4 w-4 ${usingMidnightNetwork ? 'text-purple-600' : 'text-blue-600'}`}
-                          checked={privacyOptions.protectMetadata}
-                          onChange={() => handleToggleOption('protectMetadata')}
-                          disabled={!usingMidnightNetwork}
-                          aria-describedby="metadata-protection-desc"
-                        />
-                        <label htmlFor="toggle-metadata-protection" className="text-gray-700">
-                          Protect Metadata
-                          {usingMidnightNetwork && (
+                      
+                      {/* Metadata Protection - only visible when DOT is selected */}
+                      {usingMidnightNetwork && (
+                        <div className="flex items-center">
+                          <input 
+                            type="checkbox" 
+                            id="toggle-metadata-protection" 
+                            name="toggle-metadata-protection"
+                            className="mr-2 h-4 w-4 text-purple-600"
+                            checked={privacyOptions.protectMetadata}
+                            onChange={() => handleToggleOption('protectMetadata')}
+                            aria-describedby="metadata-protection-desc"
+                          />
+                          <label htmlFor="toggle-metadata-protection" className="text-gray-700">
+                            Protect Metadata
                             <span className="ml-1 text-xs text-purple-600" id="metadata-protection-desc">(Default)</span>
-                          )}
-                        </label>
-                      </div>
+                          </label>
+                        </div>
+                      )}
                     </div>
                   </div>
                   
@@ -1040,26 +1178,51 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
                         {usingMidnightNetwork ? 'Midnight Enhanced' : privacyBadge}
                       </span>
                     </div>
-                    <div className="flex flex-col space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Amount:</span>
-                        <span className="font-mono">{previewAmount}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Recipient:</span>
-                        <span className="font-mono truncate max-w-[200px]">{previewRecipient}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Memo:</span>
-                        <span className="font-mono">{usingMidnightNetwork ? '[Protected]' : previewMemo}</span>
-                      </div>
-                      {usingMidnightNetwork && (
+                    
+                    {/* Different preview content based on selected currency */}
+                    {usingMidnightNetwork ? (
+                      /* DOT/Midnight Preview */
+                      <div className="flex flex-col space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Amount:</span>
+                          <span className="font-mono">{privacyOptions.hideAmount ? '***.**' : previewAmount}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Recipient:</span>
+                          <span className="font-mono truncate max-w-[200px]">
+                            {privacyOptions.obscureRecipient ? '5*****Y' : previewRecipient}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Memo:</span>
+                          <span className="font-mono">[Protected]</span>
+                        </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Zero-Knowledge:</span>
                           <span className="font-mono text-green-600">Enabled</span>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    ) : (
+                      /* XLM/Stellar Preview */
+                      <div className="flex flex-col space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Amount:</span>
+                          <span className="font-mono">{privacyOptions.hideAmount ? '***.**' : previewAmount}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Recipient:</span>
+                          <span className="font-mono truncate max-w-[200px]">
+                            {privacyOptions.obscureRecipient ? 'G*****L' : previewRecipient}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Memo:</span>
+                          <span className="font-mono">
+                            {privacyOptions.protectMetadata ? '[Protected]' : previewMemo}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   
                   {/* Demo Mode Button */}
