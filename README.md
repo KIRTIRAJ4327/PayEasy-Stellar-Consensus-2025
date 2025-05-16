@@ -21,6 +21,15 @@ PayEasy democratizes access to blockchain payments by eliminating technical barr
 - Enhanced privacy and security through zero-knowledge proofs
 - No need for seed phrases or complicated wallet management
 
+## 🥇 Competitive Edge
+PayEasy outperforms both traditional remittance services and crypto solutions:
+- **vs. Western Union/Remitly**: 5-10x lower fees, instant vs. days-long settlement, better exchange rates
+- **vs. Wise**: Comparable fees but with enhanced privacy, security, and instant settlement
+- **vs. Crypto.com/Coinbase**: Dramatically simpler user experience with no seed phrases or gas fees
+- **vs. RippleNet**: More consumer-focused with direct bank integration and multi-chain benefits
+
+See our [detailed competitive analysis](./NARRATIVE.md#competitive-advantage-how-payeasy-outperforms-rivals) for a full comparison.
+
 ## ⭐ Why Stellar
 We leverage Stellar Passkeys to provide a seamless and intuitive UX by:
 - Enabling biometric authentication (fingerprint/face ID) instead of passwords
