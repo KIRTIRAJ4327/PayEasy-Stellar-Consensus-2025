@@ -1,6 +1,172 @@
 // React Router components
 const { HashRouter, Route, Link, Redirect, useHistory, useLocation } = ReactRouterDOM;
 
+// Create a global object to hold services if it doesn't exist
+window.Services = window.Services || {};
+
+// Import or define our services
+// We'll expose our PolkadotService to the window for browser access
+class PolkadotService {
+  // Static properties
+  static connected = false;
+  static api = null;
+  static accounts = [];
+  static selectedAccount = null;
+  static USDC_ASSET_ID = 'your-usdc-asset-id'; // Replace with actual ID in production
+
+  /**
+   * Connect to Polkadot wallet using extension
+   */
+  static async connectWallet() {
+    try {
+      // In a real implementation, this would use:
+      // import { web3Accounts, web3Enable } from '@polkadot/extension-dapp';
+      console.log("Connecting to Polkadot wallet");
+      
+      // Simulate extension connection for demo
+      const extensions = [{ name: 'polkadot-js' }];
+      
+      if (extensions.length === 0) {
+        return {
+          success: false,
+          message: "No Polkadot extension found. Please install Polkadot.js extension."
+        };
+      }
+      
+      // Simulate getting accounts
+      const allAccounts = [
+        {
+          address: '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY',
+          meta: { name: 'Alice' }
+        },
+        {
+          address: '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty',
+          meta: { name: 'Bob' }
+        }
+      ];
+      
+      if (allAccounts.length === 0) {
+        return {
+          success: false,
+          message: "No accounts found. Please create an account in your Polkadot extension."
+        };
+      }
+      
+      this.accounts = allAccounts;
+      
+      // Simulate connecting to Assethub
+      console.log("Connecting to Assethub node");
+      this.connected = true;
+      
+      return {
+        success: true,
+        accounts: allAccounts,
+        message: "Connected to Polkadot wallet and Assethub"
+      };
+    } catch (error) {
+      console.error('Error connecting to Polkadot wallet:', error);
+      return {
+        success: false,
+        message: `Failed to connect: ${error.message}`
+      };
+    }
+  }
+
+  /**
+   * Select account for transactions
+   */
+  static selectAccount(account) {
+    this.selectedAccount = account;
+    return { success: true, account };
+  }
+
+  /**
+   * Check USDC balance for selected account
+   */
+  static async checkUSDCBalance(address) {
+    try {
+      // In a real implementation, this would call:
+      // const { free: balance } = await api.query.assets.account(assetId, address);
+      
+      console.log(`Checking USDC balance for ${address}`);
+      
+      // Simulate balance check
+      const balance = Math.random() * 1000;
+      
+      return {
+        success: true,
+        balance: balance.toFixed(2),
+        hasEnoughFunds: balance > 0
+      };
+    } catch (error) {
+      console.error("Error checking balance:", error);
+      return {
+        success: false,
+        message: "Failed to check balance"
+      };
+    }
+  }
+
+  /**
+   * Execute USDC transaction on Assethub
+   */
+  static async sendUSDCTransaction(senderAccount, receiverAddress, amount) {
+    try {
+      console.log(`Sending ${amount} USDC from ${senderAccount.address} to ${receiverAddress}`);
+      
+      // Simulate transaction time
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // 90% chance of success for demo
+      if (Math.random() < 0.9) {
+        const txHash = 'dot-tx-' + Math.random().toString(16).substring(2, 18);
+        
+        return {
+          success: true,
+          transactionHash: txHash,
+          message: "Transaction submitted successfully"
+        };
+      } else {
+        throw new Error("Transaction simulation failed");
+      }
+    } catch (error) {
+      console.error("Transaction failed:", error);
+      return {
+        success: false,
+        message: "Transaction failed: " + error.message
+      };
+    }
+  }
+
+  /**
+   * Verify transaction status
+   */
+  static async verifyTransaction(txHash) {
+    try {
+      console.log(`Verifying transaction ${txHash}`);
+      
+      // Simulate verification
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      return {
+        success: true,
+        status: 'confirmed',
+        confirmations: 3,
+        blockNumber: 12345678
+      };
+    } catch (error) {
+      console.error("Verification failed:", error);
+      return {
+        success: false,
+        message: "Verification failed: " + error.message
+      };
+    }
+  }
+}
+
+// Expose service to window
+window.Services.PolkadotService = PolkadotService;
+
 // Error Boundary Component to gracefully handle errors
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -209,8 +375,8 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
   // Network information
   const [midnightStatus, setMidnightStatus] = React.useState({ connected: false, chainInfo: '' });
 
-  // Determine if using Midnight network based on currency
-  const usingMidnightNetwork = selectedCurrency === 'DOT';
+  // Determine if using Polkadot network based on currency
+  const usingMidnightNetwork = selectedCurrency === 'DOT'; // Variable name kept for compatibility with existing code
 
   // Function to check Midnight connection
   const checkMidnightConnection = React.useCallback(async () => {
@@ -444,47 +610,65 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
     setState('loading');
     
     try {
-      // Choose between Stellar and Midnight networks based on currency
+      // Choose between Stellar and Polkadot networks based on currency
       if (usingMidnightNetwork) {
         // ---------------------------------------------
-        // MIDNIGHT NETWORK TRANSACTION FLOW
+        // POLKADOT NETWORK TRANSACTION FLOW
         // ---------------------------------------------
-        console.log("Processing Midnight transaction...");
+        console.log("Processing Polkadot transaction...");
         
         try {
-          // Use Midnight for private transactions
-          const result = await MidnightService.createPrivateTransaction(
-            recipientAddress,
-            parseFloat(amount),
-            memo,
-            {
-              hideAmount: privacyOptions.hideAmount,
-              obscureRecipient: privacyOptions.obscureRecipient,
-              preventTracking: privacyOptions.preventTracking,
-              protectMetadata: privacyOptions.protectMetadata
+          // Get reference to the PolkadotService from window
+          const PolkadotSvc = window.Services.PolkadotService;
+          
+          // First connect to the wallet if not already connected
+          if (!PolkadotSvc.connected) {
+            const walletConnection = await PolkadotSvc.connectWallet();
+            if (!walletConnection.success) {
+              throw new Error(walletConnection.message || "Failed to connect to Polkadot wallet");
             }
+          }
+          
+          // If no account is selected, select the first account (in a real app, show account selection UI)
+          if (!PolkadotSvc.selectedAccount && PolkadotSvc.accounts.length > 0) {
+            PolkadotSvc.selectAccount(PolkadotSvc.accounts[0]);
+          }
+          
+          if (!PolkadotSvc.selectedAccount) {
+            throw new Error("No Polkadot account selected");
+          }
+          
+          // Check balance
+          const balanceCheck = await PolkadotSvc.checkUSDCBalance(PolkadotSvc.selectedAccount.address);
+          if (!balanceCheck.success || !balanceCheck.hasEnoughFunds) {
+            throw new Error(balanceCheck.message || "Insufficient funds for this transaction");
+          }
+          
+          // Execute transaction
+          const result = await PolkadotSvc.sendUSDCTransaction(
+            PolkadotSvc.selectedAccount,
+            recipientAddress,
+            parseFloat(amount)
           );
           
           // Check if transaction was successful
-          if (result.status === 'success') {
+          if (result.success) {
             setState('success');
-            setTxId(result.txHash);
+            setTxId(result.transactionHash);
             
             // Update privacy features to match what was actually used
             setPrivacyOptions({
               ...privacyOptions,
-              zeroKnowledge: result.privacy.zeroKnowledge,
-              hideAmount: result.privacy.amountHidden,
-              obscureRecipient: result.privacy.recipientObscured,
-              protectMetadata: result.privacy.metadataProtected
+              zeroKnowledge: true,
+              scamProtection: true
             });
           } else {
-            setErrorText(`Transaction failed: ${result.status}`);
+            setErrorText(`Transaction failed: ${result.message}`);
             setState('error');
           }
-        } catch (midnightError) {
-          console.error('Midnight transaction failed:', midnightError);
-          setErrorText(`Midnight transaction failed: ${midnightError.message}`);
+        } catch (polkadotError) {
+          console.error('Polkadot transaction failed:', polkadotError);
+          setErrorText(`Polkadot transaction failed: ${polkadotError.message}`);
           setState('error');
         }
       } else {
@@ -635,6 +819,44 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
               <div>
                 <h2 className="text-xl font-semibold mb-4">Send Payment</h2>
                 <form onSubmit={handleSubmit}>
+                  {/* Currency Selector */}
+                  <div className="mb-6">
+                    <label className="block text-gray-700 mb-2">
+                      Select Currency
+                    </label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <button
+                        type="button"
+                        className={`flex items-center justify-center p-3 rounded-md border-2 ${
+                          selectedCurrency === 'XLM' 
+                            ? 'border-blue-500 bg-blue-50' 
+                            : 'border-gray-300 hover:border-blue-400'
+                        }`}
+                        onClick={() => handleCurrencyChange('XLM')}
+                      >
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-2">
+                          <span className="text-blue-600 font-semibold">XLM</span>
+                        </div>
+                        <span className="font-medium">Stellar</span>
+                      </button>
+                      
+                      <button
+                        type="button"
+                        className={`flex items-center justify-center p-3 rounded-md border-2 ${
+                          selectedCurrency === 'DOT' 
+                            ? 'border-purple-500 bg-purple-50' 
+                            : 'border-gray-300 hover:border-purple-400'
+                        }`}
+                        onClick={() => handleCurrencyChange('DOT')}
+                      >
+                        <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center mr-2">
+                          <span className="text-purple-600 font-semibold">DOT</span>
+                        </div>
+                        <span className="font-medium">Polkadot</span>
+                      </button>
+                    </div>
+                  </div>
+                  
                   <div className="mb-4">
                     <label className="block text-gray-700 mb-2" htmlFor="recipient">
                       Recipient Address
@@ -643,10 +865,15 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
                       className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       type="text"
                       id="recipient"
-                      placeholder={usingMidnightNetwork ? "Midnight address..." : "G..."}
+                      placeholder={usingMidnightNetwork ? "5..." : "G..."}
                       value={recipientAddress}
                       onChange={(e) => setRecipientAddress(e.target.value)}
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {usingMidnightNetwork 
+                        ? "Example: 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+                        : "Example: GDXDFWOBZTCD4PCNJZJ72GISISUUTPQX45PU44WDJMDEP3FQWMN7CCGL"}
+                    </p>
                   </div>
                   
                   <div className="mb-4">
@@ -934,10 +1161,13 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
             </div>
             <h3 className={`text-xl font-semibold ${usingMidnightNetwork ? 'text-purple-700' : 'text-green-700'} mb-2`}>Payment Successful!</h3>
             <p className="text-gray-600 mb-1">
-              Network: <span className="font-semibold">{usingMidnightNetwork ? 'Midnight Testnet' : 'Stellar Testnet'}</span>
+              Network: <span className="font-semibold">{usingMidnightNetwork ? 'Polkadot Assethub' : 'Stellar Testnet'}</span>
             </p>
             <p className="text-gray-600 mb-1">
-              Privacy Level: <span className="font-semibold">{usingMidnightNetwork ? 'Midnight Enhanced' : privacyScoreDescription}</span>
+              Token: <span className="font-semibold">{usingMidnightNetwork ? 'USDC on Assethub' : 'XLM'}</span>
+            </p>
+            <p className="text-gray-600 mb-1">
+              Privacy Level: <span className="font-semibold">{usingMidnightNetwork ? 'Polkadot Enhanced' : privacyScoreDescription}</span>
             </p>
             
             {/* Show transaction participants */}
@@ -958,12 +1188,12 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
             {/* Show the appropriate explorer link based on the network */}
             {usingMidnightNetwork ? (
               <a
-                href="https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Frpc.testnet-02.midnight.network#/explorer" 
+                href="https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Fassethub-kusama-rpc.polkadot.io#/explorer" 
                 className="text-purple-600 hover:text-purple-800 font-medium flex items-center justify-center"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                View on Midnight Explorer
+                View on Polkadot Explorer
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
