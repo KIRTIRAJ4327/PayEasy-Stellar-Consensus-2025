@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redirecting to Dashboard - PayEasy</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💸</text></svg>">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-b from-blue-500 to-blue-700 min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white max-w-md w-full rounded-lg shadow-lg overflow-hidden">
+    <!-- Header -->
+    <div class="bg-blue-600 p-6 text-center">
+      <div class="mb-3 flex justify-center">
+        <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-md">
+          <span class="text-blue-600 text-2xl font-bold">💸</span>
+        </div>
+      </div>
+      <h1 class="text-3xl font-bold text-white">PayEasy</h1>
+      <p class="text-blue-100 mt-2">Redirecting...</p>
+    </div>
+    
+    <!-- Content -->
+    <div class="p-6">
+      <div class="text-center mb-6">
+        <div class="bg-green-100 p-3 rounded-full inline-block">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h2 class="text-xl font-semibold mt-4">Authentication Successful!</h2>
+        <p class="text-gray-600 mt-2">Taking you to your dashboard...</p>
+      </div>
+      
+      <div class="mt-6 flex justify-center">
+        <div class="animate-spin h-8 w-8 border-4 border-blue-500 rounded-full border-t-transparent"></div>
+      </div>
+    </div>
+    
+    <!-- Footer -->
+    <div class="bg-gray-50 p-4 text-center border-t">
+      <p class="text-gray-600 text-sm">Built for Stellar Consensus Hackathon 2025</p>
+      <p class="text-gray-500 text-xs mt-1">Runs on Stellar Testnet & Midnight</p>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Get the address from URL parameters or localStorage
+      const urlParams = new URLSearchParams(window.location.search);
+      const address = urlParams.get('address') || localStorage.getItem('payeasy_stellar_address');
+      
+      if (!address) {
+        console.error("No address found for redirection");
+        // Redirect to login page if no address
+        window.location.href = "login-with-passkey.html";
+        return;
+      }
+      
+      // Save the passkey auth flag
+      localStorage.setItem('payeasy_passkey_auth', 'true');
+      
+      // Delay for visual consistency
+      setTimeout(() => {
+        // Use relative URL path instead of absolute URL
+        window.location.href = `index.html#/dashboard?address=${encodeURIComponent(address)}&passkey_auth=true`;
+      }, 1000);
+    });
+  </script>
+</body>
+</html> 

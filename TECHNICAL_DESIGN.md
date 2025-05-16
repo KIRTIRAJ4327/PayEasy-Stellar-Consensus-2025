@@ -1,166 +1,242 @@
-# PayEasy Technical Design Document
+# PayEasy Technical Design Documentation
 
-## System Overview
-PayEasy is a cross-chain payment solution that connects Stellar and Polkadot networks through a user-friendly web interface, abstracting away blockchain complexity while maintaining security and transparency.
+## Overview
 
-## System Architecture Diagram
+PayEasy is a web-based payment platform that leverages Stellar and Polkadot blockchain technologies to provide a Web2-like user experience for cryptocurrency transactions. The system uses passkeys for seamless authentication, smart contracts for transaction processing, and cross-chain operations for enhanced functionality.
+
+## System Architecture
+
+![System Architecture](https://i.ibb.co/ZVJrPFV/payeasy-architecture.png)
+
+### Component Diagram
+
 ```
-┌─────────────────┐     ┌───────────────────┐     ┌─────────────────┐
-│                 │     │                   │     │                 │
-│  User Interface ├─────┤ Business Services ├─────┤ Blockchain APIs │
-│  (React/TailwindCSS)  │ (Validation/Auth) │     │ (Stellar/Polkadot) 
-│                 │     │                   │     │                 │
-└─────────────────┘     └───────────────────┘     └─────────────────┘
-        │                        │                        │
-        │                        │                        │
-        ▼                        ▼                        ▼
-┌─────────────────┐     ┌───────────────────┐     ┌─────────────────┐
-│                 │     │                   │     │                 │
-│  Passkeys Auth  │     │ Smart Contracts   │     │ Network RPC     │
-│  (Web2-like UX) │     │ (Payment Logic)   │     │ (Data Access)   │
-│                 │     │                   │     │                 │
-└─────────────────┘     └───────────────────┘     └─────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                      Client Application                      │
+│                                                             │
+│  ┌─────────────┐    ┌──────────────┐    ┌───────────────┐  │
+│  │   UI Layer   │───>│  Auth Service │───>│  Transaction  │  │
+│  └─────────────┘    └──────────────┘    │    Service     │  │
+│        │                                 └───────────────┘  │
+│        │                                        │           │
+└────────┼────────────────────────────────────────┼───────────┘
+         │                                        │
+         ▼                                        ▼
+┌──────────────────┐                    ┌─────────────────────┐
+│  Passkey Service │                    │  Blockchain Service │
+└──────────────────┘                    └─────────────────────┘
+         │                                        │
+         │                                        │
+         ▼                                        │
+┌──────────────────┐                             │
+│  WebAuthn API    │                             │
+└──────────────────┘                             │
+                                                 │
+                           ┌─────────────────────┼─────────────┐
+                           │                     │             │
+                           ▼                     ▼             ▼
+                    ┌─────────────┐     ┌──────────────┐  ┌──────────┐
+                    │ Stellar API │     │ Polkadot API │  │ Launchtube│
+                    └─────────────┘     └──────────────┘  └──────────┘
 ```
 
-## Core Components
+## Major Components
 
-### 1. Frontend Interface
-- React-based web application
-- TailwindCSS for responsive design
-- Passkey integration for seamless user authentication
-- Progressive disclosure of blockchain elements
+### 1. UI Layer
+- **Purpose**: Provides the user interface for registration, authentication, and transaction management
+- **Implementation**: React components styled with TailwindCSS
+- **Key Features**: Responsive design, progressive disclosure of blockchain elements, real-time feedback
 
-### 2. Authentication System
-- Passkeys for biometric authentication
-- No seed phrases or private keys exposed to users
-- Domain-bound smart wallet creation
-- Cross-device synchronization
+### 2. Auth Service
+- **Purpose**: Manages user authentication and session state
+- **Implementation**: Integration with WebAuthn API via Passkeys Kit
+- **Key Features**: Biometric authentication, credential management, session persistence
 
-### 3. Validation Service
-- Address format validation for both Stellar and Polkadot
-- Suspicious pattern detection
-- Transaction amount validation
-- Memo field validation for Stellar
+### 3. Transaction Service
+- **Purpose**: Handles the creation, signing, and submission of blockchain transactions
+- **Implementation**: JavaScript service utilizing Stellar SDK and Polkadot.js
+- **Key Features**: Transaction builder, fee estimation, confirmation tracking, error handling
 
-### 4. Payment Processing
-- Smart contract handling payment logic
-- Cross-chain asset swapping
-- Fee optimization
-- Transaction monitoring
+### 4. Passkey Service
+- **Purpose**: Manages the creation and authentication of passkeys
+- **Implementation**: WebAuthn API wrapper using Passkeys Kit
+- **Key Features**: Device-bound credentials, biometric validation, credential storage
 
-### 5. Blockchain Integrations
-- Stellar SDK for XLM transfers
-- Polkadot.js API for DOT transfers
-- Launchtube for gas abstraction on Stellar
+### 5. Blockchain Service
+- **Purpose**: Interfaces with blockchain networks
+- **Implementation**: Abstractions over Stellar and Polkadot APIs
+- **Key Features**: Network status monitoring, transaction submission, account management
 
-## Design Decisions
+## Interaction Flow
 
-### Storage Strategy
-- Smart contract state stored on respective chains
-- User preferences in local browser storage
-- No personal data stored in centralized databases
+1. **User Registration**:
+   - User initiates registration
+   - System prompts for device biometrics via WebAuthn
+   - Passkey is created and linked to a new smart wallet
+   - Smart wallet contract is deployed to Stellar and linked to Polkadot parachain
 
-### Contract State Management
-- Minimal state design pattern
-- Event-driven architecture for state updates
-- Separate state contracts from business logic for upgradeability
+2. **User Authentication**:
+   - User enters login screen and clicks "Login"
+   - System requests biometric verification
+   - Upon successful verification, the user's smart wallet is activated
+   - Authentication token is stored for the session
 
-### Event Emission
-- Transaction initiation events
-- Confirmation events
-- Cross-chain bridging events
-- Error events with descriptive messages
-
-### Passkeys Implementation
-- WebAuthn standard integration
-- Platform authenticator preference
-- Fallback mechanisms for unsupported devices
-- Recovery path through multi-device registration
-
-## Technical Challenges Overcome
-
-1. **Cross-Chain Compatibility**: Designed a unified interface to handle differing transaction models between Stellar and Polkadot.
-
-2. **Gas Fee Abstraction**: Implemented launchtube integration to shield users from gas fee complexity.
-
-3. **Transaction Finality Discrepancies**: Created a normalized status reporting system to handle different confirmation times across chains.
-
-4. **Smart Wallet Recovery**: Developed a secure recovery mechanism that doesn't expose private keys.
-
-5. **Responsive Error Handling**: Built a comprehensive error handling system that translates blockchain errors into user-friendly messages.
-
-## Components
-
-### Frontend
-
-The frontend consists of three main files:
-
-1. **index.html**: Provides the structure of the application, including the payment form and status displays.
-2. **style.css**: Contains all styling, creating a clean, professional interface with visual feedback mechanisms.
-3. **app.js**: Handles all application logic, form validation, and interaction with the Stellar network.
-
-### Stellar SDK Integration
-
-The application uses the Stellar JavaScript SDK to:
-- Connect to the Stellar testnet
-- Load the sender's account
-- Create and sign transactions
-- Submit transactions to the network
-- Process transaction responses
-
-### User Flow
-
-1. User enters recipient address, amount, and optional memo
-2. Application validates inputs client-side
-3. User submits the form
-4. Application shows a loading animation
-5. Stellar SDK creates and submits the transaction
-6. Application displays success or error message
-7. On success, shows transaction ID with link to Stellar Expert
+3. **Transaction Flow**:
+   - User inputs recipient address and amount
+   - System validates inputs and displays confirmation
+   - User approves with biometric verification
+   - Transaction is built, signed with the passkey, and submitted
+   - Launchtube handles gas fees transparently
+   - UI displays confirmation and transaction details
 
 ## Design Choices
 
-### Why Use the JavaScript SDK?
+### Storage Strategy
 
-We chose the Stellar JavaScript SDK because:
-- It can be used directly in the browser without a backend
-- It provides a complete API for interacting with Stellar
-- It has excellent documentation and community support
-- It's accessible to developers with basic JavaScript knowledge
+1. **Local Storage**:
+   - Authentication session tokens
+   - User preferences and UI state
+   - Recent transaction history (encrypted)
 
-### Why Use the Testnet?
+2. **Smart Contract Storage**:
+   - User account details
+   - Transaction history references
+   - Authorization policies
 
-The Stellar testnet provides:
-- Free test XLM via Friendbot
-- Identical API to the mainnet
-- A safe environment for demonstration
-- Real blockchain transactions without financial risk
+3. **Indexer Storage**:
+   - Transaction records for quick retrieval
+   - Analytics data in anonymized form
 
-### Storage and State Management
+### Contract State Management
 
-- No persistent storage is used in the current implementation
-- Account state is managed by the Stellar ledger
-- Transaction state is maintained temporarily in the browser's memory
-- A production version would add local storage for transaction history
+1. **Smart Wallet Contract**:
+   - Stores: User public key, transaction history hashes, authorization rules
+   - Updates: When transactions occur or authorization rules change
+   - Access Control: Only authorized via passkey verification
 
-### Error Handling
+2. **Payment Contract**:
+   - Stores: Transaction parameters, execution status, cross-chain references
+   - Updates: When payment is initiated, in process, completed, or failed
+   - Access Control: Public for verification, restricted for execution
 
-We implemented comprehensive error handling to:
-- Validate user inputs before submission
-- Catch and interpret Stellar API errors
-- Present user-friendly error messages
-- Log detailed errors to the console for debugging
+### Events Emitted
 
-### Challenges Overcome
+1. **Authentication Events**:
+   - `UserRegistered`: When a new user registers
+   - `UserAuthenticated`: When a user successfully logs in
+   - `SessionExpired`: When a user's session expires
 
-1. **Simplifying Technical Concepts**: We abstracted away blockchain complexity while keeping the core functionality intact
-2. **User Feedback**: Implemented clear loading, success, and error states
-3. **Input Validation**: Created client-side validation to prevent errors before they happen
-4. **Cross-Browser Compatibility**: Ensured the app works across modern browsers
+2. **Transaction Events**:
+   - `TransactionInitiated`: When a user starts a transaction
+   - `TransactionSigned`: When a transaction is signed
+   - `TransactionSubmitted`: When a transaction is sent to the network
+   - `TransactionConfirmed`: When a transaction is confirmed on-chain
+   - `CrossChainBridgeInitiated`: When a cross-chain transaction begins
 
-## Flowchart
-```
-User Inputs Data → Frontend Validates Inputs → SDK Loads Source Account →
-SDK Builds Transaction → SDK Signs Transaction → SDK Submits to Testnet →
-Application Processes Response → Success/Error Display
-``` 
+3. **Error Events**:
+   - `ValidationError`: When transaction data is invalid
+   - `NetworkError`: When blockchain network issues occur
+   - `AuthenticationError`: When passkey verification fails
+
+## Passkeys Implementation
+
+Our passkey implementation leverages WebAuthn and the Stellar Passkeys Kit to create a seamless authentication experience:
+
+1. **Registration Process**:
+   - Generate a new user account with unique identifier
+   - Create WebAuthn credential bound to user's device
+   - Generate Stellar keypair from WebAuthn credential
+   - Deploy smart wallet contract with the user's public key
+   - Store credential ID and public key mapping
+
+2. **Authentication Process**:
+   - Request biometric verification from user's device
+   - Validate credential against stored credential ID
+   - Derive Stellar keypair from credential for transaction signing
+   - Create authenticated session
+
+3. **Transaction Signing**:
+   - Prepare transaction with Stellar SDK
+   - Present transaction details to user
+   - Request biometric verification for approval
+   - Sign transaction with derived keypair
+   - Submit to network
+
+4. **Security Advantages**:
+   - Private keys never leave the user's device
+   - Biometric verification required for all sensitive operations
+   - No seed phrases to manage or lose
+   - Phishing resistant by design (domain binding)
+
+## Cross-Chain Implementation
+
+PayEasy implements cross-chain functionality between Stellar and Polkadot through:
+
+1. **Bridge Contracts**:
+   - Stellar Contract: Locks assets and emits events
+   - Polkadot Contract: Monitors events and mints corresponding assets
+
+2. **Transaction Flow**:
+   - User initiates cross-chain transaction in UI
+   - Source chain transaction created and signed
+   - Bridge contract locks assets on source chain
+   - Bridge validator nodes verify transaction
+   - Target chain contract releases/mints assets
+   - UI updates with confirmation from both chains
+
+3. **Security Measures**:
+   - Multi-signature verification for bridge operations
+   - Time-locked transactions to prevent double-spending
+   - Threshold signatures for validator consensus
+   - Circuit breakers for unusual activity
+
+## Challenges Overcome
+
+### 1. Passkey Integration with Blockchain
+
+**Challenge**: Integrating WebAuthn credentials with blockchain key management  
+**Solution**: Developed a deterministic derivation path from WebAuthn credentials to Stellar keypairs, allowing seamless authentication while maintaining security.
+
+### 2. Cross-Chain Transaction Consistency
+
+**Challenge**: Ensuring transaction finality across different blockchain networks  
+**Solution**: Implemented a two-phase commit protocol with rollback capabilities and transaction monitoring to maintain consistency between Stellar and Polkadot transactions.
+
+### 3. Gas Fee Abstraction
+
+**Challenge**: Hiding gas fees from users without compromising transaction security  
+**Solution**: Integrated Launchtube to sponsor transaction fees while implementing rate limiting and abuse prevention measures.
+
+### 4. UX Simplification
+
+**Challenge**: Simplifying blockchain complexity without sacrificing functionality  
+**Solution**: Developed progressive disclosure UI patterns that reveal technical details only when needed, with sensible defaults for most operations.
+
+### 5. Error Handling Across Chains
+
+**Challenge**: Providing unified error handling for multi-chain operations  
+**Solution**: Created a standardized error taxonomy and recovery procedures that work across both Stellar and Polkadot networks, with user-friendly error messages.
+
+## Future Enhancements
+
+1. **Multi-Device Support**:
+   - Synchronize passkeys across user devices
+   - Implement recovery mechanisms for lost devices
+
+2. **Advanced Privacy Features**:
+   - Zero-knowledge proof integration for transaction privacy
+   - Confidential asset transfers
+
+3. **Expanded Cross-Chain Support**:
+   - Integration with additional blockchain networks
+   - Atomic swap capabilities for cross-chain asset exchange
+
+4. **Smart Contract Templates**:
+   - User-configurable payment conditions
+   - Recurring payment capabilities
+   - Conditional transfers based on external events
+
+5. **Enhanced Analytics**:
+   - Privacy-preserving transaction analytics
+   - Personalized spending insights
+   - Fraud detection algorithms 

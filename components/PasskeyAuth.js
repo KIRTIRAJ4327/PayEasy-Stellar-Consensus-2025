@@ -6,14 +6,29 @@
 
 class PasskeyAuth {
   constructor() {
-    this.isAvailable = typeof window !== 'undefined' && 
-                       window.PublicKeyCredential !== undefined;
+    // Check if we're running in development mode
+    this.isDevelopmentMode = window.location.hostname === 'localhost' || 
+                             window.location.protocol !== 'https:';
+    
+    // In development mode, we'll simulate passkey support
+    this.isAvailable = this.isDevelopmentMode || 
+                      (typeof window !== 'undefined' && 
+                       window.PublicKeyCredential !== undefined);
+    
     this.userId = null;
     this.username = null;
+    
+    console.log(`PasskeyAuth initialized - Development mode: ${this.isDevelopmentMode}, Available: ${this.isAvailable}`);
   }
 
   // Check if WebAuthn/Passkeys are supported in this browser
   checkAvailability() {
+    // Always return true in development mode to allow simulation
+    if (this.isDevelopmentMode) {
+      console.log("Running in development mode - simulating passkey support");
+      return true;
+    }
+    
     if (!this.isAvailable) {
       console.error("WebAuthn/Passkeys are not supported in this browser");
       return false;
@@ -24,6 +39,30 @@ class PasskeyAuth {
 
   // Register a new user with passkey
   async registerUser(username) {
+    // In development mode, simulate successful registration
+    if (this.isDevelopmentMode) {
+      console.log(`Development mode: Simulating passkey registration for ${username}`);
+      
+      // Generate a random user ID
+      const userId = Math.random().toString(36).substring(2, 15);
+      
+      // Store in class for this session
+      this.userId = userId;
+      this.username = username;
+      
+      // Simulate a delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      return {
+        success: true,
+        userId: userId,
+        credential: {
+          id: "simulated-credential-id",
+          type: "public-key"
+        }
+      };
+    }
+    
     if (!this.checkAvailability()) return { success: false, error: "Passkeys not supported" };
     
     try {
@@ -85,6 +124,22 @@ class PasskeyAuth {
 
   // Authenticate a user with passkey
   async authenticateUser() {
+    // In development mode, simulate successful authentication
+    if (this.isDevelopmentMode) {
+      console.log("Development mode: Simulating passkey authentication");
+      
+      // Simulate a delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      return {
+        success: true,
+        credential: {
+          id: "simulated-credential-id",
+          type: "public-key"
+        }
+      };
+    }
+    
     if (!this.checkAvailability()) return { success: false, error: "Passkeys not supported" };
     
     try {
@@ -122,6 +177,13 @@ class PasskeyAuth {
 
   // Create a Stellar Smart Wallet using the passkey
   async createStellarSmartWallet() {
+    // In development mode, we can simulate this without requiring prior registration
+    if (this.isDevelopmentMode && !this.userId) {
+      const simulatedUserId = Math.random().toString(36).substring(2, 15);
+      this.userId = simulatedUserId;
+      this.username = this.username || "Demo User";
+    }
+    
     if (!this.userId) {
       return { 
         success: false, 
@@ -129,18 +191,16 @@ class PasskeyAuth {
       };
     }
     
-    // This is where you would integrate with Stellar's smart wallet functionality
-    // In a real implementation, you would:
-    // 1. Create a contract-controlled account
-    // 2. Associate it with the user's passkey
-    // 3. Return the new Stellar address
+    // Use a fixed, consistent Stellar address for demo purposes
+    // This matches the example address shown on the login page
+    const stellarAddress = "GDXDFWOBZTCD4PCNJZJ72GISISUUTPQX45PU44WDJMDEP3FQWMN7CCGL";
     
-    // For demo purposes, we'll just simulate this
-    const simulatedStellarAddress = `G${this.userId.replace(/-/g, '').substring(0, 55)}`;
+    // Simulate a delay
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     return {
       success: true,
-      stellarAddress: simulatedStellarAddress,
+      stellarAddress: stellarAddress,
       userId: this.userId,
       username: this.username
     };
@@ -148,6 +208,11 @@ class PasskeyAuth {
   
   // Sign a transaction using the passkey
   async signTransaction(transactionXDR) {
+    // In development mode, we can simulate this without requiring authentication
+    if (this.isDevelopmentMode && !this.userId) {
+      this.userId = Math.random().toString(36).substring(2, 15);
+    }
+    
     if (!this.userId) {
       return { 
         success: false, 
@@ -159,11 +224,11 @@ class PasskeyAuth {
       // In a real implementation, this would use the WebAuthn API to sign the transaction
       // For demo purposes, we'll simulate a successful signature
       
-      console.log("Simulating transaction signature for:", transactionXDR.substring(0, 20) + "...");
+      console.log("Simulating transaction signature for:", transactionXDR?.substring(0, 20) + "...");
       
       return {
         success: true,
-        signedTransaction: transactionXDR + ".SIGNED", // Just a placeholder
+        signedTransaction: (transactionXDR || "empty") + ".SIGNED", // Just a placeholder
         signedAt: new Date().toISOString()
       };
     } catch (error) {
@@ -184,4 +249,6 @@ if (typeof module !== 'undefined' && module.exports) {
 // Also make it available as a global variable
 if (typeof window !== 'undefined') {
   window.PasskeyAuth = PasskeyAuth;
-} 
+}
+
+console.log("PasskeyAuth loaded"); 

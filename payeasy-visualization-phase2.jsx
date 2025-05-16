@@ -67,8 +67,35 @@ const PayEasyApp = () => {
   React.useEffect(() => {
     try {
       const { isLoggedIn, currentUser } = AuthService.checkLoginStatus();
-      setIsLoggedIn(isLoggedIn);
-      setCurrentUser(currentUser);
+      
+      // Check for URL parameters for passkey authentication
+      const params = new URLSearchParams(window.location.search);
+      const addressFromURL = params.get('address');
+      const passkey_auth = params.get('passkey_auth') === 'true';
+      
+      // If we have an address in URL params and not already logged in, auto-login
+      if (addressFromURL && !isLoggedIn) {
+        console.log("Detected address in URL params, auto-logging in:", addressFromURL);
+        // Set passkey flag if it's a passkey login
+        if (passkey_auth && AuthService.isLoggedInWithPasskey !== undefined) {
+          AuthService.isPasskeyAuthenticated = true;
+        }
+        
+        // Auto-login with the address
+        AuthService.login(addressFromURL, passkey_auth).then(result => {
+          if (result.success && isMounted.current) {
+            setIsLoggedIn(true);
+            setCurrentUser(result.user);
+            console.log("Auto-login successful");
+          }
+        }).catch(error => {
+          console.error("Auto-login error:", error);
+        });
+      } else {
+        // Standard login status check
+        setIsLoggedIn(isLoggedIn);
+        setCurrentUser(currentUser);
+      }
     } catch (error) {
       console.error("Error checking login status:", error);
     }
@@ -1238,6 +1265,31 @@ const LoginScreen = ({ onLogin }) => {
             </div>
           )}
           
+          {/* Registration with Passkey Option */}
+          <div className="mb-8 border-b pb-6">
+            <h3 className="text-center font-semibold text-gray-700 mb-3">Secure Authentication</h3>
+            <div className="flex flex-col gap-3">
+              <a 
+                href="register-passkey.html" 
+                className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-md text-center font-medium flex items-center justify-center"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+                Register with Passkey
+              </a>
+            </div>
+            <div className="mt-3 text-xs text-center text-gray-500">
+              Register with a passkey for enhanced security
+            </div>
+          </div>
+          
+          <div className="flex items-center my-4">
+            <div className="flex-grow border-t border-gray-300"></div>
+            <span className="flex-shrink mx-4 text-gray-600 text-sm">login with Stellar address</span>
+            <div className="flex-grow border-t border-gray-300"></div>
+          </div>
+          
           <form onSubmit={(e) => { e.preventDefault(); handleLoginSubmit(); }}>
             <div className="mb-4">
               <label className="block text-gray-700 mb-2" htmlFor="stellar-address">
@@ -1271,7 +1323,7 @@ const LoginScreen = ({ onLogin }) => {
                   Logging in...
                 </>
               ) : (
-                'Login Securely'
+                'Login with Stellar Address'
               )}
             </button>
           </form>
@@ -1321,6 +1373,7 @@ const LoginScreen = ({ onLogin }) => {
 // Update the Dashboard component to accept currentUser and onLogout props
 const Dashboard = ({ currentUser, onLogout }) => {
   const history = useHistory();
+  const location = useLocation();
   
   // Add mounted ref to prevent state updates after unmounting
   const isMounted = React.useRef(true);
@@ -1331,6 +1384,9 @@ const Dashboard = ({ currentUser, onLogout }) => {
   const [lastRefreshTime, setLastRefreshTime] = React.useState(new Date());
   const refreshIntervalRef = React.useRef(null);
   
+  // Check if this is a passkey login
+  const [isPasskeyLogin, setIsPasskeyLogin] = React.useState(false);
+  
   // Exchange rates
   const [exchangeRates, setExchangeRates] = React.useState({
     XLM: { USD: 0.15, CAD: 0.20, INR: 12.5 },
@@ -1339,6 +1395,18 @@ const Dashboard = ({ currentUser, onLogout }) => {
   
   // Network information
   const [midnightStatus, setMidnightStatus] = React.useState({ connected: false, chainInfo: '' });
+  
+  // Check for passkey login when component mounts
+  React.useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    setIsPasskeyLogin(searchParams.has('passkey_auth') || 
+                       localStorage.getItem('payeasy_passkey_login') === 'true');
+    
+    // Store passkey login status in local storage for persistent UI state
+    if (searchParams.has('passkey_auth')) {
+      localStorage.setItem('payeasy_passkey_login', 'true');
+    }
+  }, [location]);
   
   // Set up cleanup on unmount
   React.useEffect(() => {
@@ -1493,7 +1561,9 @@ const Dashboard = ({ currentUser, onLogout }) => {
             </div>
           </div>
           
-          <p className="text-blue-100 mt-1">Welcome back, {currentUser?.displayName || 'User'}</p>
+          <p className="text-blue-100 mt-1">
+            Welcome back, {currentUser?.displayName || 'User'}
+          </p>
           
           <p className="text-xs text-blue-200 mt-1">
             Last updated: {lastRefreshTime.toLocaleTimeString()}

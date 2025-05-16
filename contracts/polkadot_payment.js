@@ -1,8 +1,8 @@
 // Simple Polkadot payment handler for the Polkadot Hub
 // This is a simplified version for demonstration purposes
 
-// Import the Polkadot API
-const { ApiPromise, WsProvider, Keyring } = require('@polkadot/api');
+// In a browser environment, we'll create a mock implementation
+// const { ApiPromise, WsProvider, Keyring } = require('@polkadot/api');
 
 class PolkadotPaymentHandler {
   constructor() {
@@ -13,28 +13,22 @@ class PolkadotPaymentHandler {
 
   // Initialize connection to Polkadot network
   async connect() {
-    if (this.isConnected) return;
+    if (this.isConnected) return { success: true, chain: "Polkadot Hub Testnet" };
 
     try {
-      // Connect to Polkadot Hub testnet
-      const wsProvider = new WsProvider('wss://rococo-contracts-rpc.polkadot.io');
-      this.api = await ApiPromise.create({ provider: wsProvider });
+      // For browser demo, we'll just simulate a connection
+      console.log("Simulating Polkadot connection...");
       
-      // Get chain information
-      const [chain, nodeName, nodeVersion] = await Promise.all([
-        this.api.rpc.system.chain(),
-        this.api.rpc.system.name(),
-        this.api.rpc.system.version()
-      ]);
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      console.log(`Connected to ${chain} using ${nodeName} v${nodeVersion}`);
       this.isConnected = true;
       
       return {
         success: true,
-        chain: chain.toString(),
-        node: nodeName.toString(),
-        version: nodeVersion.toString()
+        chain: "Polkadot Hub Testnet",
+        node: "Mock Node",
+        version: "1.0.0"
       };
     } catch (error) {
       console.error("Failed to connect to Polkadot network:", error);
@@ -52,23 +46,19 @@ class PolkadotPaymentHandler {
     }
 
     try {
-      // Create keyring instance
-      const keyring = new Keyring({ type: 'sr25519' });
-      const sender = keyring.addFromUri(senderSeed);
+      // For browser demo, we'll just simulate sending a payment
+      console.log(`Simulating payment of ${amount} DOT to ${recipientAddress}`);
       
-      // Convert amount to Planck (DOT has 10 decimal places)
-      const amountInPlanck = this.api.createType('Balance', amount * (10 ** 10));
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Create and send transaction
-      const transfer = this.api.tx.balances.transfer(recipientAddress, amountInPlanck);
-      
-      // Sign and send the transaction
-      const hash = await transfer.signAndSend(sender);
+      // Generate a random hash for the transaction
+      const hash = Array.from(Array(64), () => Math.floor(Math.random() * 16).toString(16)).join('');
       
       return {
         success: true,
-        txHash: hash.toString(),
-        sender: sender.address,
+        txHash: hash,
+        sender: "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
         recipient: recipientAddress,
         amount: amount
       };
@@ -88,15 +78,21 @@ class PolkadotPaymentHandler {
     }
 
     try {
-      // Query transaction status - this is simplified
-      // In a real implementation, you would subscribe to transaction events
-      const blockHash = await this.api.rpc.chain.getBlockHash();
+      // For browser demo, we'll just simulate checking status
+      console.log(`Simulating check of transaction status for ${txHash}`);
+      
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // Generate a random hash for the block
+      const blockHash = Array.from(Array(64), () => Math.floor(Math.random() * 16).toString(16)).join('');
       
       return {
         success: true,
-        status: "submitted",
-        blockHash: blockHash.toString(),
-        txHash: txHash
+        status: "confirmed",
+        blockHash: blockHash,
+        txHash: txHash,
+        blockNumber: Math.floor(Math.random() * 1000000) + 1
       };
     } catch (error) {
       console.error("Failed to check transaction status:", error);
@@ -109,13 +105,16 @@ class PolkadotPaymentHandler {
 
   // Disconnect from the network
   async disconnect() {
-    if (this.api) {
-      await this.api.disconnect();
+    if (this.isConnected) {
       this.isConnected = false;
       console.log("Disconnected from Polkadot network");
     }
   }
 }
 
-// Export the payment handler
-module.exports = PolkadotPaymentHandler; 
+// Make available directly in browser
+if (typeof window !== 'undefined') {
+  window.PolkadotPaymentHandler = PolkadotPaymentHandler;
+}
+
+console.log("PolkadotPaymentHandler loaded"); 

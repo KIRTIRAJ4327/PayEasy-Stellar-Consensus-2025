@@ -1,58 +1,37 @@
 // Simple Stellar payment contract example
-// This is a simplified version for demonstration purposes
+// This is a simplified mock implementation for browser demo
 
-// Import the Stellar SDK
-const StellarSdk = require('@stellar/stellar-sdk');
-
-// Horizon testnet instance
-const server = new StellarSdk.Server('https://horizon-testnet.stellar.org');
-
-// Smart contract wrapper class
+// Mock implementation for browser demo
 class StellarPaymentContract {
   constructor() {
-    // The contract deploys to testnet by default
-    this.networkPassphrase = StellarSdk.Networks.TESTNET;
-    this.contractId = "EXAMPLE_CONTRACT_ID_PLACEHOLDER"; // Replace with actual deployed contract ID
+    this.contractId = "EXAMPLE_CONTRACT_ID_PLACEHOLDER";
+    console.log("StellarPaymentContract initialized");
   }
 
   // Initialize a new payment
   async initializePayment(sourceKeypair, destinationPublicKey, amount, memo = "") {
     try {
-      // Load source account
-      const sourceAccount = await server.loadAccount(sourceKeypair.publicKey());
+      // For demo purposes, we'll just simulate a successful payment
+      console.log(`Simulating payment of ${amount} XLM to ${destinationPublicKey}`);
+      console.log(`Memo: ${memo || 'none'}`);
       
-      // Build the transaction
-      const transaction = new StellarSdk.TransactionBuilder(sourceAccount, {
-        fee: StellarSdk.BASE_FEE,
-        networkPassphrase: this.networkPassphrase
-      })
-        .addOperation(StellarSdk.Operation.payment({
-          destination: destinationPublicKey,
-          asset: StellarSdk.Asset.native(), // XLM
-          amount: amount.toString()
-        }))
-        .addMemo(memo ? new StellarSdk.Memo.text(memo) : StellarSdk.Memo.none())
-        .setTimeout(30)
-        .build();
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Sign the transaction
-      transaction.sign(sourceKeypair);
-      
-      // Submit to the network
-      const result = await server.submitTransaction(transaction);
+      // Generate a random hash for the transaction
+      const hash = Array.from(Array(64), () => Math.floor(Math.random() * 16).toString(16)).join('');
+      const ledger = Math.floor(Math.random() * 1000000) + 40000000;
       
       return {
         success: true,
-        txHash: result.hash,
-        ledger: result.ledger,
-        result
+        txHash: hash,
+        ledger: ledger
       };
     } catch (error) {
       console.error("Payment failed", error);
       return {
         success: false,
-        error: error.message || "Unknown error",
-        details: error.response?.data?.extras?.result_codes || {}
+        error: error.message || "Unknown error"
       };
     }
   }
@@ -60,21 +39,20 @@ class StellarPaymentContract {
   // Check payment status
   async checkPaymentStatus(txHash) {
     try {
-      const tx = await server.transactions().transaction(txHash).call();
+      // For demo purposes, we'll just simulate checking status
+      console.log(`Checking status for transaction ${txHash}`);
+      
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
       return {
         success: true,
         status: "confirmed",
-        ledger: tx.ledger,
-        createdAt: tx.created_at
+        ledger: Math.floor(Math.random() * 1000000) + 40000000,
+        createdAt: new Date().toISOString()
       };
     } catch (error) {
-      if (error.response && error.response.status === 404) {
-        return {
-          success: false,
-          status: "pending_or_failed",
-          error: "Transaction not found. It may be pending or failed."
-        };
-      }
+      console.error("Failed to check status", error);
       return {
         success: false,
         status: "error",
@@ -84,5 +62,7 @@ class StellarPaymentContract {
   }
 }
 
-// Export the contract
-module.exports = StellarPaymentContract; 
+// Make available directly in browser
+window.StellarPaymentContract = StellarPaymentContract;
+
+console.log("StellarPaymentContract loaded"); 
