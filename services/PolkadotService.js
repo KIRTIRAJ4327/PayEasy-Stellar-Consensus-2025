@@ -3,6 +3,8 @@
  * Service for interacting with the Polkadot blockchain and Assethub
  */
 
+console.log("PolkadotService script starting to load...");
+
 // Create a class for the service
 class PolkadotService {
   // Static properties
@@ -162,12 +164,23 @@ class PolkadotService {
   }
 }
 
-// Make it available globally for browser use
-if (typeof window !== 'undefined') {
-  window.PolkadotService = PolkadotService;
-}
+console.log("PolkadotService class defined");
+
+// Make it directly available as a global variable
+window.PolkadotService = PolkadotService;
+console.log("PolkadotService loaded and available at window.PolkadotService:", window.PolkadotService);
+console.log("PolkadotService connected property:", window.PolkadotService.connected);
+
+// Also make it available through the Services namespace for consistency
+window.Services = window.Services || {};
+window.Services.PolkadotService = PolkadotService;
+console.log("PolkadotService also available at window.Services.PolkadotService:", window.Services.PolkadotService);
+console.log("PolkadotService through Services namespace connected property:", window.Services.PolkadotService.connected);
 
 // Export for require/CommonJS environments
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = PolkadotService;
+  console.log("PolkadotService exported as a CommonJS module");
 } 
+
+console.log("PolkadotService script has finished loading"); 

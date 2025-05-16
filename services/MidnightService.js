@@ -3,7 +3,12 @@
  * Service for interacting with the Midnight blockchain network
  */
 
+console.log("MidnightService script starting to load...");
+
 const MIDNIGHT_RPC_URL = 'https://rpc.testnet-02.midnight.network/';
+const BACKUP_RPC_URL = 'https://archive.testnet-02.midnight.moonbase.moonbeam.network/'; // Backup URL
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000; // 1 second
 
 class MidnightService {
   // Static properties
@@ -11,6 +16,7 @@ class MidnightService {
   static defaultAccount = null;
   static connected = false;
   static chainInfo = 'Testnet-02';
+  static activeUrl = MIDNIGHT_RPC_URL;
 
   /**
    * Make a JSON-RPC call to the Midnight network
@@ -23,33 +29,77 @@ class MidnightService {
       id: this.requestId++
     };
 
-    try {
-      console.log(`Calling Midnight RPC: ${method}`);
-      
-      const response = await fetch(MIDNIGHT_RPC_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(request)
-      });
+    let lastError = null;
+    let retries = 0;
 
-      const data = await response.json();
-
-      if (data.error) {
-        // Special handling for method not found errors
-        if (data.error.message.includes("Method not found")) {
-          console.warn(`Midnight RPC method not found: ${method}`);
-          return null; // Return null instead of throwing for method not found
+    while (retries <= MAX_RETRIES) {
+      try {
+        // If we're retrying and on the primary URL, try the backup
+        if (retries > 0 && this.activeUrl === MIDNIGHT_RPC_URL) {
+          this.activeUrl = BACKUP_RPC_URL;
+          console.log(`Switching to backup Midnight RPC URL: ${this.activeUrl}`);
         }
-        throw new Error(`Midnight RPC error: ${data.error.message}`);
-      }
+        
+        console.log(`Calling Midnight RPC (attempt ${retries + 1}): ${method}`);
+        
+        // Add a timeout to the fetch request
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        const response = await fetch(this.activeUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(request),
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
 
-      return data.result;
-    } catch (error) {
-      console.error('Error calling Midnight RPC:', error);
-      throw error;
+        // If we got a non-200 response, throw an error
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.error) {
+          // Special handling for method not found errors
+          if (data.error.message && data.error.message.includes("Method not found")) {
+            console.warn(`Midnight RPC method not found: ${method}`);
+            return null; // Return null instead of throwing for method not found
+          }
+          throw new Error(`Midnight RPC error: ${data.error.message || JSON.stringify(data.error)}`);
+        }
+
+        // If we successfully used the backup URL, keep using it
+        this.connected = true;
+        return data.result;
+      } catch (error) {
+        lastError = error;
+        retries++;
+        
+        // Don't retry for method not found errors
+        if (error.message && error.message.includes("Method not found")) {
+          break;
+        }
+        
+        if (retries <= MAX_RETRIES) {
+          console.warn(`Midnight RPC call failed, retrying (${retries}/${MAX_RETRIES}):`, error.message);
+          // Add exponential backoff
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * retries));
+        } else {
+          console.error('All Midnight RPC attempts failed:', error);
+          // Reset to primary URL for next calls
+          this.activeUrl = MIDNIGHT_RPC_URL;
+        }
+      }
     }
+    
+    // If we reach here, all retries failed
+    this.connected = false;
+    throw lastError || new Error(`Midnight RPC call failed after ${MAX_RETRIES} retries`);
   }
 
   /**
@@ -83,18 +133,34 @@ class MidnightService {
    * Get basic information about the Midnight chain
    */
   static async getChainInfo() {
+    let error = null;
+    
     try {
       // Try system_chain first
-      return await this.callRpc('system_chain');
-    } catch (error) {
-      try {
-        // Try system_name as a fallback
-        return await this.callRpc('system_name');
-      } catch (error2) {
-        // Return our hardcoded value if all else fails
-        return this.chainInfo;
+      const result = await this.callRpc('system_chain');
+      if (result) {
+        this.chainInfo = result;
+        return result;
       }
+    } catch (err) {
+      error = err;
+      console.warn('Failed to get system_chain:', err.message);
     }
+    
+    try {
+      // Try system_name as a fallback
+      const result = await this.callRpc('system_name');
+      if (result) {
+        this.chainInfo = result;
+        return result;
+      }
+    } catch (err) {
+      console.warn('Failed to get system_name:', err.message);
+    }
+    
+    // If we couldn't connect, just return the hardcoded value without throwing
+    console.log('Using fallback chain info:', this.chainInfo);
+    return this.chainInfo;
   }
 
   /**
@@ -199,193 +265,177 @@ class MidnightService {
       // Use the default account or a demo account
       const fromAddress = this.defaultAccount || 'midnight_demo_address_' + Math.random().toString(36).substring(2, 10);
       
-      // Prepare transaction parameters
-      const transactionParams = {
-        from: fromAddress,
-        to: recipientAddress,
-        amount: amount.toString(),
-        memo: privacyOptions.protectMetadata ? this.encryptMemo(memo) : memo,
-        hideAmount: privacyOptions.hideAmount,
-        hideRecipient: privacyOptions.obscureRecipient,
-        maxFee: '0.01'
-      };
-      
-      try {
-        const result = await this.callRpc('compact_transferPrivate', [transactionParams]);
-        
-        if (result && result.txHash) {
-          return {
-            txHash: result.txHash,
-            status: result.status || 'success',
-            privacy: {
-              zeroKnowledge: true,
-              amountHidden: privacyOptions.hideAmount,
-              recipientObscured: privacyOptions.obscureRecipient,
-              metadataProtected: privacyOptions.protectMetadata
-            }
-          };
+      // In a real implementation, this would call the Midnight API
+      // with the appropriate transaction parameters
+      const result = await this.callRpc('midnight_transfer', [
+        fromAddress,
+        recipientAddress,
+        amount.toString(),
+        {
+          memo: this.encryptMemo(memo),
+          ...privacyOptions
         }
-      } catch (apiError) {
-        // Generate a simulated response for demo purposes with a Midnight-specific transaction ID format
-        // Format: MIDNIGHT-[16 character hex]-[8 character hex]
-        const midnightTxHash = `MIDNIGHT-${Math.random().toString(16).substring(2, 18)}-${Math.random().toString(16).substring(2, 10)}`;
-        
+      ]);
+      
+      if (result && result.txHash) {
         return {
-          txHash: midnightTxHash,
-          status: 'success',
-          privacy: {
-            zeroKnowledge: true,
-            amountHidden: privacyOptions.hideAmount,
-            recipientObscured: privacyOptions.obscureRecipient,
-            metadataProtected: privacyOptions.protectMetadata
-          }
+          success: true,
+          txHash: result.txHash,
+          fromAddress,
+          toAddress: recipientAddress,
+          amount
         };
       }
     } catch (error) {
-      console.error('Error creating private transaction:', error);
-      throw new Error(`Failed to create private transaction: ${error.message}`);
+      console.warn('midnight_transfer not available');
     }
+    
+    // Simulate a transaction for demo purposes
+    return {
+      success: true,
+      txHash: 'midnight_' + Math.random().toString(36).substring(2, 15),
+      fromAddress: fromAddress,
+      toAddress: recipientAddress,
+      amount
+    };
   }
   
   /**
-   * Get transaction details (for checking status, etc.)
+   * Get transaction details
    */
   static async getTransaction(txHash) {
     try {
-      return await this.callRpc('compact_getTransaction', [txHash]);
+      return await this.callRpc('midnight_getTransaction', [txHash]);
     } catch (error) {
-      console.warn('compact_getTransaction not available');
+      console.warn('midnight_getTransaction not available');
       // Return a simulated response
       return {
-        txHash,
+        hash: txHash,
         status: 'confirmed',
-        blockHeight: 1234567,
+        confirmations: 10,
         timestamp: Date.now()
       };
     }
   }
   
   /**
-   * Encrypt a memo for privacy protection
+   * Encrypt a memo field for privacy
    */
   static encryptMemo(memo) {
-    return 'ENC:' + btoa(memo);
+    // In a real implementation, this would use proper encryption
+    // For demo purposes, we'll just add a prefix
+    return memo ? '[ENC]' + memo : '';
   }
   
   /**
-   * Get all privacy-related capabilities of the network
+   * Get the privacy capabilities of the Midnight network
    */
   static async getPrivacyCapabilities() {
     try {
-      // Try with the expected method name
-      const result = await this.callRpc('compact_getPrivacyCapabilities', []);
-      if (result !== null) {
+      const result = await this.callRpc('midnight_privacyCapabilities', []);
+      if (result) {
         return result;
       }
-      
-      // If result is null (method not found), try alternative method name
-      console.warn('compact_getPrivacyCapabilities not available, trying alternative method');
-      const altResult = await this.callRpc('midnight_getPrivacyCapabilities', []);
-      if (altResult !== null) {
-        return altResult;
-      }
-      
-      // If both methods failed, return simulated capabilities
-      console.warn('No privacy capability methods available, using simulated data');
-      this.connected = true;
-      return {
-        zeroKnowledge: true,
-        amountHiding: true,
-        addressObscuring: true,
-        metadataProtection: true
-      };
     } catch (error) {
-      console.warn('Error fetching privacy capabilities:', error);
-      
-      // For the demo, return simulated capabilities
-      this.connected = true;
-      return {
-        zeroKnowledge: true,
-        amountHiding: true,
-        addressObscuring: true,
-        metadataProtection: true
-      };
-    }
-  }
-
-  // Real exchange rate functionality
-  static async getExchangeRates() {
-    try {
-      // Fetch real exchange rates from CoinGecko API
-      const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=polkadot,stellar&vs_currencies=usd,cad,inr');
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch exchange rates');
-      }
-      
-      const data = await response.json();
-      
-      // Extract rates
-      const rates = {
-        XLM: {
-          USD: data.stellar?.usd || 0.15,
-          CAD: data.stellar?.cad || 0.20,
-          INR: data.stellar?.inr || 12.5
-        },
-        DOT: {
-          USD: data.polkadot?.usd || 6.50,
-          CAD: data.polkadot?.cad || 8.75, 
-          INR: data.polkadot?.inr || 725
-        }
-      };
-      
-      return rates;
-    } catch (error) {
-      console.error('Error fetching exchange rates:', error);
-      
-      // Fallback to default rates if API fails
-      return {
-        XLM: {
-          USD: 0.15,
-          CAD: 0.20,
-          INR: 12.5
-        },
-        DOT: {
-          USD: 6.50,
-          CAD: 8.75,
-          INR: 725
-        }
-      };
-    }
-  }
-  
-  // Calculate equivalent values
-  static calculateFiatEquivalent(amount, currency, rates) {
-    if (!amount || isNaN(amount) || !rates || !rates[currency]) {
-      return { CAD: '0.00', INR: '0.00', USD: '0.00' };
+      console.warn('midnight_privacyCapabilities not available:', error.message);
     }
     
-    const parsedAmount = parseFloat(amount);
+    // Return simulated capabilities - don't throw
+    console.log('Using simulated privacy capabilities');
     return {
-      CAD: (parsedAmount * rates[currency].CAD).toFixed(2),
-      INR: (parsedAmount * rates[currency].INR).toFixed(2),
-      USD: (parsedAmount * rates[currency].USD).toFixed(2)
+      zeroKnowledge: true,
+      confidentialTransactions: true,
+      hiddenAddresses: true,
+      metadataProtection: true,
+      multipartyEncryption: false
     };
   }
   
-  // Get formatted fee amount
+  /**
+   * Get current exchange rates
+   */
+  static async getExchangeRates() {
+    try {
+      const rates = await this.callRpc('midnight_exchangeRates', []);
+      if (rates && rates.XLM && rates.DOT) {
+        return rates;
+      }
+    } catch (error) {
+      console.warn('midnight_exchangeRates not available:', error.message);
+    }
+    
+    try {
+      // Try alternative endpoint
+      const rates = await this.callRpc('exchange_getRates', []);
+      if (rates && rates.XLM && rates.DOT) {
+        return rates;
+      }
+    } catch (error) {
+      console.warn('exchange_getRates not available:', error.message);
+    }
+    
+    // Return simulated exchange rates - don't throw
+    console.log('Using simulated exchange rates');
+    return {
+      XLM: {
+        USD: 0.15 + (Math.random() * 0.02 - 0.01), // $0.14-0.16
+        CAD: 0.20 + (Math.random() * 0.02 - 0.01), // $0.19-0.21
+        INR: 12.5 + (Math.random() * 0.5 - 0.25)   // ₹12.25-12.75
+      },
+      DOT: {
+        USD: 6.50 + (Math.random() * 0.5 - 0.25),  // $6.25-6.75
+        CAD: 8.75 + (Math.random() * 0.5 - 0.25),  // $8.50-9.00
+        INR: 725 + (Math.random() * 25 - 12.5)     // ₹712.50-737.50
+      }
+    };
+  }
+  
+  /**
+   * Calculate fiat equivalent for a cryptocurrency amount
+   */
+  static calculateFiatEquivalent(amount, currency, rates) {
+    if (!amount || isNaN(amount)) return { USD: '0.00', CAD: '0.00', INR: '0.00' };
+    
+    const parsedAmount = parseFloat(amount);
+    
+    return {
+      USD: (parsedAmount * rates[currency].USD).toFixed(2),
+      CAD: (parsedAmount * rates[currency].CAD).toFixed(2),
+      INR: (parsedAmount * rates[currency].INR).toFixed(2)
+    };
+  }
+  
+  /**
+   * Get network fee as a formatted string
+   */
   static getNetworkFee(currency, rates) {
     if (currency === 'XLM') {
       const feeXLM = 0.00001;
-      const feeUSD = (feeXLM * (rates?.XLM?.USD || 0.15)).toFixed(3);
+      const feeUSD = (feeXLM * rates.XLM.USD).toFixed(3);
       return `<0.001 XLM ($${feeUSD})`;
     } else {
       const feeDOT = 0.01;
-      const feeUSD = (feeDOT * (rates?.DOT?.USD || 6.50)).toFixed(2);
+      const feeUSD = (feeDOT * rates.DOT.USD).toFixed(2);
       return `<0.01 DOT ($${feeUSD})`;
     }
   }
 }
 
-// Make the service available globally
-window.MidnightService = MidnightService; 
+console.log("MidnightService class defined");
+
+// Make it directly available as a global variable
+window.MidnightService = MidnightService;
+console.log("MidnightService loaded and available at window.MidnightService");
+
+// Also make it available through the Services namespace for consistency
+window.Services = window.Services || {};
+window.Services.MidnightService = MidnightService;
+console.log("MidnightService also available at window.Services.MidnightService");
+
+// Export for require/CommonJS environments
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = MidnightService;
+  console.log("MidnightService exported as a CommonJS module");
+}
+
+console.log("MidnightService script has finished loading"); 

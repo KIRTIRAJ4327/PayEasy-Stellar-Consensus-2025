@@ -3,6 +3,8 @@
  * Service for user authentication, leveraging Midnight's decentralized identity capabilities
  */
 
+console.log("AuthService script starting to load...");
+
 class AuthService {
   // Static properties
   static isLoggedIn = false;
@@ -130,5 +132,20 @@ class AuthService {
   }
 }
 
+console.log("AuthService class defined");
+
 // Make the service available globally
 window.AuthService = AuthService; 
+
+// Also make it available through the Services namespace for consistency
+window.Services = window.Services || {};
+window.Services.AuthService = AuthService;
+console.log("AuthService also available at window.Services.AuthService");
+
+// Export for require/CommonJS environments
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = AuthService;
+  console.log("AuthService exported as a CommonJS module");
+}
+
+console.log("AuthService script has finished loading"); 

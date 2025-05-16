@@ -61,8 +61,9 @@ const PayEasyApp = () => {
   // Auth state
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
   const [currentUser, setCurrentUser] = React.useState(null);
+  const isMounted = React.useRef(true);
   
-  // Check login status on mount
+  // Check login status on mount and clean up on unmount
   React.useEffect(() => {
     try {
       const { isLoggedIn, currentUser } = AuthService.checkLoginStatus();
@@ -71,12 +72,18 @@ const PayEasyApp = () => {
     } catch (error) {
       console.error("Error checking login status:", error);
     }
+    
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
   
   // Login handler
   const handleLogin = async (address) => {
     try {
       const result = await AuthService.login(address);
+      
+      if (!isMounted.current) return false;
       
       if (result.success) {
         setIsLoggedIn(true);
@@ -86,7 +93,9 @@ const PayEasyApp = () => {
         return false;
       }
     } catch (error) {
-      console.error("Login error:", error);
+      if (isMounted.current) {
+        console.error("Login error:", error);
+      }
       return false;
     }
   };
@@ -94,6 +103,9 @@ const PayEasyApp = () => {
   // Logout handler
   const handleLogout = () => {
     try {
+      // Mark as unmounted first to prevent any state updates after logout
+      isMounted.current = false;
+      
       AuthService.logout();
       setIsLoggedIn(false);
       setCurrentUser(null);
@@ -155,6 +167,9 @@ const PayEasyApp = () => {
 const PaymentScreen = ({ currentUser, onLogout }) => {
   const history = useHistory();
   
+  // Add mounted ref to prevent state updates after unmounting
+  const isMounted = React.useRef(true);
+  
   // All the state from the original PayEasyPhase2 component
   const [state, setState] = React.useState('form'); // Possible states: form, loading, success, error
   const [recipientAddress, setRecipientAddress] = React.useState('');
@@ -185,6 +200,18 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
   const [lastRefreshTime, setLastRefreshTime] = React.useState(new Date());
   const refreshIntervalRef = React.useRef(null);
   
+  // Set up cleanup on unmount
+  React.useEffect(() => {
+    return () => {
+      isMounted.current = false;
+      // Also clear any intervals to be safe
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+    };
+  }, []);
+  
   // Privacy features state
   const [privacyScore, setPrivacyScore] = React.useState(20);
   const [privacyScoreDescription, setPrivacyScoreDescription] = React.useState('Basic Privacy');
@@ -214,16 +241,18 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
 
   // Function to check Midnight connection
   const checkMidnightConnection = React.useCallback(async () => {
+    if (!isMounted.current) return;
     setIsRefreshing(true);
     try {
       const chainInfo = await MidnightService.getChainInfo();
       
       // Also check privacy capabilities
       try {
+        if (!isMounted.current) return;
         const capabilities = await MidnightService.getPrivacyCapabilities();
         
         // Update capabilities if needed
-        if (capabilities) {
+        if (capabilities && isMounted.current) {
           setPrivacyOptions(prevOptions => ({
             ...prevOptions,
             zeroKnowledge: capabilities.zeroKnowledge || prevOptions.zeroKnowledge,
@@ -234,20 +263,24 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
         console.warn('Could not fetch privacy capabilities, using defaults', err);
       }
       
+      if (!isMounted.current) return;
       setMidnightStatus({
         connected: true,
         chainInfo
       });
       console.log('Connected to Midnight chain:', chainInfo);
     } catch (error) {
+      if (!isMounted.current) return;
       console.error('Failed to connect to Midnight:', error);
       setMidnightStatus({
         connected: false,
         chainInfo: ''
       });
     } finally {
-      setIsRefreshing(false);
-      setLastRefreshTime(new Date());
+      if (isMounted.current) {
+        setIsRefreshing(false);
+        setLastRefreshTime(new Date());
+      }
     }
   }, []);
 
@@ -260,7 +293,7 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
     if (autoRefreshEnabled) {
       refreshIntervalRef.current = setInterval(() => {
         // Only refresh if not already refreshing
-        if (!isRefreshing) {
+        if (!isRefreshing && isMounted.current) {
           checkMidnightConnection();
         }
       }, 30000); // Refresh every 30 seconds
@@ -270,12 +303,15 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
     return () => {
       if (refreshIntervalRef.current) {
         clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
       }
     };
   }, [autoRefreshEnabled, checkMidnightConnection, isRefreshing]);
 
   // Toggle auto-refresh
   const toggleAutoRefresh = () => {
+    if (!isMounted.current) return;
+    
     const newState = !autoRefreshEnabled;
     setAutoRefreshEnabled(newState);
     
@@ -286,9 +322,9 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
     }
     
     // Set up new interval if enabled
-    if (newState) {
+    if (newState && isMounted.current) {
       refreshIntervalRef.current = setInterval(() => {
-        if (!isRefreshing) {
+        if (!isRefreshing && isMounted.current) {
           checkMidnightConnection();
         }
       }, 30000);
@@ -297,18 +333,19 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
 
   // Manual refresh function
   const handleManualRefresh = () => {
-    if (!isRefreshing) {
+    if (!isRefreshing && isMounted.current) {
       checkMidnightConnection();
     }
   };
 
   // When currency changes, update privacy settings
   React.useEffect(() => {
-    // Enable zero-knowledge proofs by default for DOT (Midnight)
+    // Enable zero-knowledge proofs and metadata protection by default for DOT (Midnight)
     if (selectedCurrency === 'DOT') {
       setPrivacyOptions(prevOptions => ({
         ...prevOptions,
-        zeroKnowledge: true
+        zeroKnowledge: true,
+        protectMetadata: true
       }));
     }
   }, [selectedCurrency]);
@@ -395,6 +432,8 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
   const updateExchangeRates = React.useCallback(async () => {
     try {
       const rates = await MidnightService.getExchangeRates();
+      if (!isMounted.current) return;
+      
       if (rates) {
         setExchangeRates(rates);
         console.log('Updated exchange rates:', rates);
@@ -428,6 +467,8 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    if (!isMounted.current) return;
+    
     if (!recipientAddress) {
       setErrorText('Please enter a valid recipient address');
       setState('error');
@@ -452,12 +493,26 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
         console.log("Processing Polkadot transaction...");
         
         try {
-          // Get reference to the PolkadotService from window
-          const PolkadotSvc = window.PolkadotService;
+          // Check if PolkadotService is available in the global scope
+          console.log("Checking for PolkadotService availability in window:", window.PolkadotService);
+          console.log("Checking for PolkadotService availability in Services:", window.Services?.PolkadotService);
+          
+          // Try to access PolkadotService from either location
+          const PolkadotSvc = window.PolkadotService || window.Services?.PolkadotService;
+          
+          if (!PolkadotSvc) {
+            console.error("PolkadotService is not loaded. Make sure PolkadotService.js is correctly included in the HTML.");
+            throw new Error("Polkadot service not available. Please try refreshing the page.");
+          }
+          
+          console.log("PolkadotService found:", PolkadotSvc);
+          console.log("PolkadotService connected state:", PolkadotSvc.connected);
           
           // First connect to the wallet if not already connected
           if (!PolkadotSvc.connected) {
+            console.log("Attempting to connect to Polkadot wallet...");
             const walletConnection = await PolkadotSvc.connectWallet();
+            console.log("Wallet connection result:", walletConnection);
             if (!walletConnection.success) {
               throw new Error(walletConnection.message || "Failed to connect to Polkadot wallet");
             }
@@ -485,6 +540,9 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
             parseFloat(amount)
           );
           
+          // Check if component is still mounted before updating state
+          if (!isMounted.current) return;
+          
           // Check if transaction was successful
           if (result.success) {
             setState('success');
@@ -501,6 +559,8 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
             setState('error');
           }
         } catch (polkadotError) {
+          if (!isMounted.current) return;
+          
           console.error('Polkadot transaction failed:', polkadotError);
           setErrorText(`Polkadot transaction failed: ${polkadotError.message}`);
           setState('error');
@@ -515,6 +575,9 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
           // Use original Stellar implementation
           // Simulate network delay
           setTimeout(() => {
+            // First check if component is still mounted
+            if (!isMounted.current) return;
+            
             // 90% chance of success
             if (Math.random() < 0.9) {
               setState('success');
@@ -533,12 +596,16 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
             }
           }, 2000);
         } catch (stellarError) {
+          if (!isMounted.current) return;
+          
           console.error('Stellar transaction failed:', stellarError);
           setErrorText(`Stellar transaction failed: ${stellarError.message}`);
           setState('error');
         }
       }
     } catch (error) {
+      if (!isMounted.current) return;
+      
       console.error('Transaction failed:', error);
       setErrorText(`Transaction failed: ${error.message}`);
       setState('error');
@@ -667,6 +734,7 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
                             : 'border-gray-300 hover:border-blue-400'
                         }`}
                         onClick={() => handleCurrencyChange('XLM')}
+                        aria-pressed={selectedCurrency === 'XLM'}
                       >
                         <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-2">
                           <span className="text-blue-600 font-semibold">XLM</span>
@@ -682,6 +750,7 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
                             : 'border-gray-300 hover:border-purple-400'
                         }`}
                         onClick={() => handleCurrencyChange('DOT')}
+                        aria-pressed={selectedCurrency === 'DOT'}
                       >
                         <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center mr-2">
                           <span className="text-purple-600 font-semibold">DOT</span>
@@ -692,16 +761,19 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
                   </div>
                   
                   <div className="mb-4">
-                    <label className="block text-gray-700 mb-2" htmlFor="recipient">
+                    <label className="block text-gray-700 mb-2" htmlFor="recipient-address">
                       Recipient Address
                     </label>
                     <input
                       className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       type="text"
-                      id="recipient"
+                      id="recipient-address"
+                      name="recipient-address"
                       placeholder={usingMidnightNetwork ? "5..." : "G..."}
                       value={recipientAddress}
                       onChange={(e) => setRecipientAddress(e.target.value)}
+                      autoComplete="off"
+                      required
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       {usingMidnightNetwork 
@@ -711,38 +783,43 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
                   </div>
                   
                   <div className="mb-4">
-                    <label className="block text-gray-700 mb-2" htmlFor="sender">
+                    <label className="block text-gray-700 mb-2" htmlFor="sender-address">
                       Sender Address
                     </label>
                     <input
                       className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       type="text"
-                      id="sender"
+                      id="sender-address"
+                      name="sender-address"
                       placeholder="G..."
                       value={senderAddress}
                       onChange={(e) => setSenderAddress(e.target.value)}
+                      autoComplete="off"
                     />
                   </div>
                   
                   <div className="mb-4">
-                    <label className="block text-gray-700 mb-2" htmlFor="amount">
+                    <label className="block text-gray-700 mb-2" htmlFor="payment-amount">
                       Amount ({selectedCurrency})
                     </label>
                     <input
                       className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       type="number"
-                      id="amount"
+                      id="payment-amount"
+                      name="payment-amount"
                       placeholder="1.0"
                       min="0.0000001"
                       step="0.0000001"
                       value={amount}
                       onChange={handleAmountChange}
+                      autoComplete="transaction-amount"
+                      required
                     />
                     <div className="text-sm text-gray-600 mt-1">
                       ≈ ${usdEquivalent} | CAD {cadEquivalent} | ₹{inrEquivalent}
                     </div>
                     <div className="text-green-600 text-sm mt-1 flex items-center">
-                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
                       </svg>
                       Fee: {feeAmount}
@@ -750,16 +827,18 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
                   </div>
                   
                   <div className="mb-6">
-                    <label className="block text-gray-700 mb-2" htmlFor="memo">
+                    <label className="block text-gray-700 mb-2" htmlFor="transaction-memo">
                       Memo {usingMidnightNetwork && "(Protected by default)"}
                     </label>
                     <input
                       className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       type="text"
-                      id="memo"
+                      id="transaction-memo"
+                      name="transaction-memo"
                       placeholder="Payment for coffee"
                       value={memo}
                       onChange={(e) => setMemo(e.target.value)}
+                      autoComplete="off"
                     />
                   </div>
                   
@@ -811,15 +890,17 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
                         <input 
                           type="checkbox" 
                           id="toggle-zero-knowledge" 
+                          name="toggle-zero-knowledge"
                           className={`mr-2 h-4 w-4 ${usingMidnightNetwork ? 'text-purple-600' : 'text-blue-600'}`}
                           checked={privacyOptions.zeroKnowledge}
                           onChange={() => handleToggleOption('zeroKnowledge')}
                           disabled={!usingMidnightNetwork}
+                          aria-describedby="zero-knowledge-desc"
                         />
                         <label htmlFor="toggle-zero-knowledge" className="text-gray-700">
                           Zero-Knowledge Proofs
                           {usingMidnightNetwork && (
-                            <span className="ml-1 text-xs text-purple-600">(Default)</span>
+                            <span className="ml-1 text-xs text-purple-600" id="zero-knowledge-desc">(Default)</span>
                           )}
                         </label>
                       </div>
@@ -827,6 +908,7 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
                         <input 
                           type="checkbox" 
                           id="toggle-scam-protection" 
+                          name="toggle-scam-protection"
                           className={`mr-2 h-4 w-4 ${usingMidnightNetwork ? 'text-purple-600' : 'text-blue-600'}`}
                           checked={privacyOptions.scamProtection}
                           onChange={() => handleToggleOption('scamProtection')}
@@ -837,6 +919,7 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
                         <input 
                           type="checkbox" 
                           id="toggle-rate-limiting" 
+                          name="toggle-rate-limiting"
                           className={`mr-2 h-4 w-4 ${usingMidnightNetwork ? 'text-purple-600' : 'text-blue-600'}`}
                           checked={privacyOptions.rateLimiting}
                           onChange={() => handleToggleOption('rateLimiting')}
@@ -847,6 +930,7 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
                         <input 
                           type="checkbox" 
                           id="toggle-encryption" 
+                          name="toggle-encryption"
                           className={`mr-2 h-4 w-4 ${usingMidnightNetwork ? 'text-purple-600' : 'text-blue-600'}`}
                           checked={privacyOptions.encryption}
                           onChange={() => handleToggleOption('encryption')}
@@ -864,6 +948,7 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
                         <input 
                           type="checkbox" 
                           id="toggle-hide-amount" 
+                          name="toggle-hide-amount"
                           className={`mr-2 h-4 w-4 ${usingMidnightNetwork ? 'text-purple-600' : 'text-blue-600'}`}
                           checked={privacyOptions.hideAmount}
                           onChange={() => handleToggleOption('hideAmount')}
@@ -874,6 +959,7 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
                         <input 
                           type="checkbox" 
                           id="toggle-obscure-recipient" 
+                          name="toggle-obscure-recipient"
                           className={`mr-2 h-4 w-4 ${usingMidnightNetwork ? 'text-purple-600' : 'text-blue-600'}`}
                           checked={privacyOptions.obscureRecipient}
                           onChange={() => handleToggleOption('obscureRecipient')}
@@ -884,6 +970,7 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
                         <input 
                           type="checkbox" 
                           id="toggle-prevent-tracking" 
+                          name="toggle-prevent-tracking"
                           className={`mr-2 h-4 w-4 ${usingMidnightNetwork ? 'text-purple-600' : 'text-blue-600'}`}
                           checked={privacyOptions.preventTracking}
                           onChange={() => handleToggleOption('preventTracking')}
@@ -894,15 +981,17 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
                         <input 
                           type="checkbox" 
                           id="toggle-metadata-protection" 
+                          name="toggle-metadata-protection"
                           className={`mr-2 h-4 w-4 ${usingMidnightNetwork ? 'text-purple-600' : 'text-blue-600'}`}
                           checked={privacyOptions.protectMetadata}
                           onChange={() => handleToggleOption('protectMetadata')}
                           disabled={!usingMidnightNetwork}
+                          aria-describedby="metadata-protection-desc"
                         />
                         <label htmlFor="toggle-metadata-protection" className="text-gray-700">
                           Protect Metadata
                           {usingMidnightNetwork && (
-                            <span className="ml-1 text-xs text-purple-600">(Default)</span>
+                            <span className="ml-1 text-xs text-purple-600" id="metadata-protection-desc">(Default)</span>
                           )}
                         </label>
                       </div>
@@ -1077,11 +1166,19 @@ const PaymentScreen = ({ currentUser, onLogout }) => {
   );
 };
 
-// Update the LoginScreen component to accept onLogin prop
+// Update the LoginScreen component to prevent state updates after unmounting
 const LoginScreen = ({ onLogin }) => {
   const [loginAddress, setLoginAddress] = React.useState('');
   const [error, setError] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
+  const isMounted = React.useRef(true);
+  
+  // Set up cleanup on unmount
+  React.useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
   
   const handleLoginSubmit = async () => {
     setIsLoading(true);
@@ -1090,87 +1187,123 @@ const LoginScreen = ({ onLogin }) => {
     // Validate address format
     const validationResult = ValidationService.validateStellarAddress(loginAddress);
     if (!validationResult.isValid) {
-      setError(validationResult.message);
-      setIsLoading(false);
+      if (isMounted.current) {
+        setError(validationResult.message);
+        setIsLoading(false);
+      }
       return;
     }
     
     try {
       const success = await onLogin(loginAddress);
+      if (!isMounted.current) return;
+      
       if (!success) {
         setError('Authentication failed. Please check your address and try again.');
       }
     } catch (err) {
-      setError('An error occurred during login.');
-      console.error('Login error:', err);
+      if (isMounted.current) {
+        setError('An error occurred during login.');
+        console.error('Login error:', err);
+      }
     } finally {
-      setIsLoading(false);
+      if (isMounted.current) {
+        setIsLoading(false);
+      }
     }
   };
   
   return (
-    <div className="flex flex-col items-center w-full min-h-screen bg-gray-100 py-8">
-      <div className="w-full max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden">
-        <div className="bg-blue-600 p-6 text-center">
+    <div className="flex flex-col items-center w-full min-h-screen bg-gradient-to-b from-blue-500 to-blue-700 py-8">
+      <div className="w-full max-w-md mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+        <div className="bg-blue-600 p-8 text-center">
+          <div className="mb-3 flex justify-center">
+            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-md">
+              <span className="text-blue-600 text-2xl font-bold">💸</span>
+            </div>
+          </div>
           <h1 className="text-3xl font-bold text-white">PayEasy</h1>
-          <p className="text-blue-100 mt-1">Fast, secure, and private payments on Stellar</p>
+          <p className="text-blue-100 mt-2">Fast, secure, and private payments on Stellar & Midnight</p>
         </div>
         
         <div className="p-8">
-          <h2 className="text-xl font-semibold mb-6 text-center">Login with Stellar Account</h2>
+          <h2 className="text-xl font-semibold mb-6 text-center">Welcome to PayEasy</h2>
           <p className="text-sm text-gray-600 mb-6 text-center">
-            Secured by Midnight's zero-knowledge verification
+            Experience next-generation payments with enhanced privacy and security
           </p>
           
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-700 rounded-md">
+            <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-700 rounded-md" role="alert">
               {error}
             </div>
           )}
           
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2" htmlFor="address">
-              Stellar Public Key
-            </label>
-            <input
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              type="text"
-              id="address"
-              placeholder="G..."
-              value={loginAddress}
-              onChange={(e) => setLoginAddress(e.target.value)}
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Example: GDXDFWOBZTCD4PCNJZJ72GISISUUTPQX45PU44WDJMDEP3FQWMN7CCGL
-            </p>
-          </div>
+          <form onSubmit={(e) => { e.preventDefault(); handleLoginSubmit(); }}>
+            <div className="mb-4">
+              <label className="block text-gray-700 mb-2" htmlFor="stellar-address">
+                Stellar Public Key
+              </label>
+              <input
+                className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                type="text"
+                id="stellar-address"
+                name="stellar-address"
+                placeholder="G..."
+                value={loginAddress}
+                onChange={(e) => setLoginAddress(e.target.value)}
+                autoComplete="off"
+                aria-required="true"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Example: GDXDFWOBZTCD4PCNJZJ72GISISUUTPQX45PU44WDJMDEP3FQWMN7CCGL
+              </p>
+            </div>
+            
+            <button
+              type="submit"
+              className={`w-full ${isLoading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'} text-white font-medium py-3 px-4 rounded-md mt-4 flex justify-center items-center transition duration-200`}
+              disabled={isLoading}
+              aria-busy={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" aria-hidden="true"></div>
+                  Logging in...
+                </>
+              ) : (
+                'Login Securely'
+              )}
+            </button>
+          </form>
           
-          <button
-            className={`w-full ${isLoading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'} text-white font-medium py-3 px-4 rounded-md mt-4 flex justify-center items-center`}
-            onClick={handleLoginSubmit}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                Logging in...
-              </>
-            ) : (
-              'Login Securely'
-            )}
-          </button>
-          
-          <div className="mt-6 p-4 bg-purple-50 rounded-lg border border-purple-100">
-            <div className="flex items-start">
-              <div className="flex-shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-purple-500" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                </svg>
+          <div className="mt-8 grid grid-cols-1 gap-4">
+            <div className="bg-purple-50 rounded-lg border border-purple-100 p-4">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-purple-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-purple-800">
+                    Enhanced privacy with Midnight's zero-knowledge proofs
+                  </p>
+                </div>
               </div>
-              <div className="ml-3">
-                <p className="text-sm text-purple-800">
-                  PayEasy uses Midnight's zero-knowledge proofs to secure your login without storing sensitive data.
-                </p>
+            </div>
+            
+            <div className="bg-green-50 rounded-lg border border-green-100 p-4">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-green-800">
+                    Fast, secure transactions with near-zero fees
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -1178,7 +1311,7 @@ const LoginScreen = ({ onLogin }) => {
         
         <div className="bg-gray-50 p-4 text-center border-t">
           <p className="text-gray-600 text-sm">Built for Stellar Consensus Hackathon 2025</p>
-          <p className="text-gray-500 text-xs mt-1">Runs on Stellar Testnet</p>
+          <p className="text-gray-500 text-xs mt-1">Runs on Stellar Testnet & Midnight</p>
         </div>
       </div>
     </div>
@@ -1188,6 +1321,9 @@ const LoginScreen = ({ onLogin }) => {
 // Update the Dashboard component to accept currentUser and onLogout props
 const Dashboard = ({ currentUser, onLogout }) => {
   const history = useHistory();
+  
+  // Add mounted ref to prevent state updates after unmounting
+  const isMounted = React.useRef(true);
   
   // Auto-refresh state
   const [isRefreshing, setIsRefreshing] = React.useState(false);
@@ -1204,26 +1340,38 @@ const Dashboard = ({ currentUser, onLogout }) => {
   // Network information
   const [midnightStatus, setMidnightStatus] = React.useState({ connected: false, chainInfo: '' });
   
+  // Set up cleanup on unmount
+  React.useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+  
   // Check Midnight connection status
   const checkMidnightConnection = React.useCallback(async () => {
+    if (!isMounted.current) return;
     setIsRefreshing(true);
     try {
       const chainInfo = await MidnightService.getChainInfo();
       
+      if (!isMounted.current) return;
       setMidnightStatus({
         connected: true,
         chainInfo
       });
       console.log('Connected to Midnight chain:', chainInfo);
     } catch (error) {
+      if (!isMounted.current) return;
       console.error('Failed to connect to Midnight:', error);
       setMidnightStatus({
         connected: false,
         chainInfo: ''
       });
     } finally {
-      setIsRefreshing(false);
-      setLastRefreshTime(new Date());
+      if (isMounted.current) {
+        setIsRefreshing(false);
+        setLastRefreshTime(new Date());
+      }
     }
   }, []);
 
@@ -1236,7 +1384,7 @@ const Dashboard = ({ currentUser, onLogout }) => {
     if (autoRefreshEnabled) {
       refreshIntervalRef.current = setInterval(() => {
         // Only refresh if not already refreshing
-        if (!isRefreshing) {
+        if (!isRefreshing && isMounted.current) {
           checkMidnightConnection();
         }
       }, 30000); // Refresh every 30 seconds
@@ -1245,10 +1393,17 @@ const Dashboard = ({ currentUser, onLogout }) => {
     // Initialize exchange rates
     const initRates = async () => {
       try {
+        // Make sure component is still mounted before continuing
+        if (!isMounted.current) return;
+        
         const rates = await ExchangeService.getCurrentRates();
-        setExchangeRates(rates);
+        if (isMounted.current) {
+          setExchangeRates(rates);
+        }
       } catch (error) {
-        console.error("Error initializing exchange rates:", error);
+        if (isMounted.current) {
+          console.error("Error initializing exchange rates:", error);
+        }
       }
     };
     
@@ -1258,12 +1413,15 @@ const Dashboard = ({ currentUser, onLogout }) => {
     return () => {
       if (refreshIntervalRef.current) {
         clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
       }
     };
   }, [autoRefreshEnabled, checkMidnightConnection, isRefreshing]);
 
   // Toggle auto-refresh
   const toggleAutoRefresh = () => {
+    if (!isMounted.current) return;
+    
     const newState = !autoRefreshEnabled;
     setAutoRefreshEnabled(newState);
     
@@ -1274,9 +1432,9 @@ const Dashboard = ({ currentUser, onLogout }) => {
     }
     
     // Set up new interval if enabled
-    if (newState) {
+    if (newState && isMounted.current) {
       refreshIntervalRef.current = setInterval(() => {
-        if (!isRefreshing) {
+        if (!isRefreshing && isMounted.current) {
           checkMidnightConnection();
         }
       }, 30000);
@@ -1285,13 +1443,23 @@ const Dashboard = ({ currentUser, onLogout }) => {
 
   // Manual refresh function
   const handleManualRefresh = () => {
-    if (!isRefreshing) {
+    if (!isRefreshing && isMounted.current) {
       checkMidnightConnection();
     }
   };
   
   // Navigate to payment screen
   const goToPayment = () => {
+    // Cancel any pending operations or updates
+    isMounted.current = false;
+    
+    // Clear any existing intervals
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current);
+      refreshIntervalRef.current = null;
+    }
+    
+    // Navigate to payment screen
     history.push('/payment');
   };
   
@@ -1537,9 +1705,33 @@ const Dashboard = ({ currentUser, onLogout }) => {
 
 // The original PayEasyPhase2 component now becomes the main export
 const PayEasyPhase2 = () => {
-  return (
-    <ErrorBoundary>
-      <PayEasyApp />
-    </ErrorBoundary>
-  );
-}; 
+  try {
+    console.log("Inside PayEasyPhase2 component");
+    
+    // Directly render the full app instead of showing a loading screen
+    return (
+      <ErrorBoundary>
+        <PayEasyApp />
+      </ErrorBoundary>
+    );
+  } catch (err) {
+    console.error("Error in PayEasyPhase2:", err);
+    return <div className="p-6 bg-red-100 text-red-700 rounded" role="alert">Error loading app: {err.message}</div>;
+  }
+};
+
+// Make PayEasyPhase2 globally available
+window.PayEasyPhase2 = PayEasyPhase2;
+
+// Make components globally available for diagnostics
+window.ErrorBoundary = ErrorBoundary;
+window.PayEasyApp = PayEasyApp;
+window.PaymentScreen = PaymentScreen;
+window.LoginScreen = LoginScreen;
+window.Dashboard = Dashboard;
+
+// Render the PayEasyPhase2 component to the DOM
+ReactDOM.render(
+  <PayEasyPhase2 />,
+  document.getElementById('root')
+); 
