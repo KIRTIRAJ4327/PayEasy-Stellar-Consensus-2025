@@ -92,6 +92,18 @@ We leverage Stellar Passkeys to provide a seamless and intuitive UX by:
    http://localhost:8000
    ```
 
+## 🎬 Demo
+
+### Video Demo
+[Watch the Demo Video](./demo/PayEasy_Demo.mp4)
+
+### Screenshots
+![Login Screen](./screenshots/login.png)
+![Dashboard](./screenshots/dashboard.png)
+![Send Payment](./screenshots/send_payment.png)
+![Transaction Confirmation](./screenshots/confirmation.png)
+![Transaction History](./screenshots/history.png)
+
 ## 🔐 Security Features
 - Zero-knowledge proofs for transaction privacy
 - WebAuthn integration for secure, passwordless login
