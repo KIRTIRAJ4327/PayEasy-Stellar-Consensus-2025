@@ -1,0 +1,20 @@
+{
+  "verbose": true,
+  "ignore": [
+    ".git",
+    "node_modules/**/node_modules",
+    "output.css"
+  ],
+  "watch": [
+    "*.js",
+    "*.jsx",
+    "*.html",
+    "*.css",
+    "services/",
+    "components/"
+  ],
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "ext": "js,jsx,html,css"
+} 
