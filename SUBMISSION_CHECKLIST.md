@@ -18,9 +18,9 @@
 - [x] Link to "Why" narrative
 - [x] Link to Technical Design Docs
 - [x] Deployed contract IDs with Stellar Expert Links
-- [ ] **MISSING**: Demo video showing the app in action
-- [ ] **MISSING**: Screenshots of UI in README
-- [ ] **MISSING**: Video with audio explaining how the project works
+- [x] Demo video showing the app in action
+- [x] Screenshots of UI in README
+- [x] Video with audio explaining how the project works
 
 ### Technical Docs ✅
 - [x] Overview of system at high-level (TECHNICAL_DESIGN.md)
@@ -65,19 +65,19 @@
 
 ## Action Items
 
-1. **Create demo video**:
+1. **Create demo video** ✅:
    - Record screen capture of app usage
    - Show registration, login, and transaction flow
    - Keep under 3 minutes
 
-2. **Take screenshots**:
+2. **Take screenshots** ✅:
    - Login screen
    - Registration flow
    - Dashboard
    - Transaction creation
    - Transaction confirmation
 
-3. **Create explanatory video**:
+3. **Create explanatory video** ✅:
    - Walkthrough of codebase
    - Explanation of key features
    - Demo of working features

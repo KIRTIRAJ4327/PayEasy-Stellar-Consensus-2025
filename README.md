@@ -95,14 +95,15 @@ We leverage Stellar Passkeys to provide a seamless and intuitive UX by:
 ## 🎬 Demo
 
 ### Video Demo
-[Watch the Demo Video](./demo/PayEasy_Demo.mp4)
+[Watch the Demo Video](https://youtu.be/oWyUG0-nZU8)
 
 ### Screenshots
-![Login Screen](./screenshots/login.png)
-![Dashboard](./screenshots/dashboard.png)
-![Send Payment](./screenshots/send_payment.png)
-![Transaction Confirmation](./screenshots/confirmation.png)
-![Transaction History](./screenshots/history.png)
+![Login Screen](./screenshots/1.login_home.png)
+![Registration](./screenshots/2.registeration_passkey.png)
+![Dashboard](./screenshots/3.dashboard.png)
+![Send Payment](./screenshots/4.send_payment.png)
+![Transaction Confirmation - Stellar](./screenshots/5.transaction_confirm_Steller.png)
+![Transaction Confirmation - DOT](./screenshots/5.transactionC_Dot.png)
 
 ## 🔐 Security Features
 - Zero-knowledge proofs for transaction privacy
